@@ -1,10 +1,10 @@
 {
   "id": "memoria",
   "name": "Memoria",
-  "version": "1.1.1",
+  "version": "1.4.11",
   "minAppVersion": "1.4.0",
   "description": "浮墨式碎片笔记瀑布流，数据永远是纯 Markdown，自由属于你。",
-  "author": "You & CodeBuddy",
-  "authorUrl": "",
+  "author": "i-iooi-i",
+  "authorUrl": "https://github.com/i-iooi-i",
   "isDesktopOnly": false
 }

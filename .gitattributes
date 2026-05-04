@@ -1,0 +1,16 @@
+# Memoria release artifacts — 锁定换行符为 LF，避免 Windows/Linux 跨平台差异
+# 尤其是 main.js（esbuild 在 Windows 上产出 LF，提交时不应被 autocrlf 改成 CRLF）
+
+* text=auto eol=lf
+
+# 文本类明确走 LF
+*.js     text eol=lf
+*.css    text eol=lf
+*.md     text eol=lf
+*.json   text eol=lf
+
+# 万一以后加的二进制资产
+*.png    binary
+*.jpg    binary
+*.gif    binary
+*.ico    binary
