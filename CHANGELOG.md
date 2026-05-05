@@ -6,6 +6,23 @@
 
 ---
 
+## v1.4.14（2026-05-05 晚上）
+
+### 📱 手机端输入框文字左边笔画被"咬掉"
+
+#### 症状
+Obsidian Mobile 上打开 Memoria，在顶部输入框连打几行"测试"，文字的左侧竖笔明显缺失了 1-2px，看起来像文字被左边裁了一刀。
+
+#### 原因
+v1.1.18 给移动端 `.memoria-input` 加了 `padding-left: 0 !important` 作为"双保险"，初衷是防止某些 OB 主题偷偷给 textarea 注入 padding 挤掉 placeholder 首字符。但一刀切置 0 过度干预：textarea 文字紧贴自己的左内边界，在 iOS WebView + 某些中文字体组合下，中文字（"测""此"等）的首列笔画会被 1-2px 的反锯齿 / 子像素抗锯齿"咬掉"，视觉上像被剪了半边。
+
+#### 修复
+`padding-left: 0 !important` → `padding-left: 4px !important`，另加 `padding-right: 4px !important` 保持对称。4px 的安全区既能防主题注入大 padding（主题塞进来的也会被 4px 盖掉），又保证字形完整呈现。
+
+纯移动端 CSS，PC 端不受影响。
+
+---
+
 ## v1.4.13（2026-05-05 中午）
 
 ### 🔢 侧栏「今天」「本周」补上条数显示

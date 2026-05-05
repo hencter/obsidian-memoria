@@ -1474,10 +1474,17 @@
   .memoria-input {
     min-height: 56px;
     font-size: 15px; /* 手机上避免 iOS 自动缩放 */
-    /* v1.1.18: 双保险 —— 防止第三方 OB 主题给 textarea 加 text-indent 
-     *   或 padding-left，导致 placeholder 首字符"此"被左边界裁掉。 */
+    /* v1.1.18: 防第三方 OB 主题给 textarea 加 text-indent / padding-left，
+     *   导致 placeholder 首字符"此"被左边界裁掉。
+     * v1.4.14: 把 padding-left 从 0 !important 改为 4px !important。
+     *   原来一刀切置 0 会让文字紧贴 textarea 左边缘，在 iOS WebView + 某些
+     *   中文字体组合下会把首列笔画（例如"测""此"）"咬掉" 1-2px，
+     *   视觉上像文字被"剪半"。4px 的安全区既能防主题注入大 padding，
+     *   又保证字形完整呈现。
+     * 右侧补齐对称 padding，避免最后一字在滚动条出现时被压到。 */
     text-indent: 0 !important;
-    padding-left: 0 !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
     -webkit-appearance: none;
     appearance: none;
   }
