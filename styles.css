@@ -1481,10 +1481,19 @@
      *   中文字体组合下会把首列笔画（例如"测""此"）"咬掉" 1-2px，
      *   视觉上像文字被"剪半"。4px 的安全区既能防主题注入大 padding，
      *   又保证字形完整呈现。
-     * 右侧补齐对称 padding，避免最后一字在滚动条出现时被压到。 */
+     * 右侧补齐对称 padding，避免最后一字在滚动条出现时被压到。
+     * v1.4.16: 补 padding-top/bottom。
+     *   根因：PC 端原 .memoria-input 有 `padding: 0 !important`（简写覆盖四边），
+     *   v1.4.14 移动端只补了左右，垂直方向仍然是 0。iOS WebView 里中文字首行顶部
+     *   反锯齿像素会超出 content box 被裁（"测""试""此"等字右上点画会丢 1-2px），
+     *   表现为\"顶部笔画被咬掉\"。加 padding-top:2px 提供垂直安全区，对称加
+     *   padding-bottom:2px 保持视觉平衡；line-height:1.6 已经让文字之间有缓冲，
+     *   所以 2px 足够，再大会让输入框看起来闲散。 */
     text-indent: 0 !important;
     padding-left: 4px !important;
     padding-right: 4px !important;
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
     -webkit-appearance: none;
     appearance: none;
   }

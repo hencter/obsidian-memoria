@@ -6,6 +6,28 @@
 
 ---
 
+## v1.4.16（2026-05-06 凌晨）
+
+### 📱 手机端输入框首行顶部笔画被"咬掉"（续）
+
+#### 症状
+v1.4.14 修复了手机端输入框文字"左侧笔画被咬掉"的问题（`padding-left: 0 → 4px`），但实际使用发现**顶部区域依然会丢 1-2px**，尤其中文字右上部的点画（"测""试""此"等）。下方区域已经 OK。
+
+#### 根因
+PC 端 `.memoria-input` 在 styles.css:426 有一句 `padding: 0 !important;` —— 这是简写形式，会**同时覆盖四边** padding。v1.4.14 给移动端 `@media` 只补了 `padding-left: 4px` 和 `padding-right: 4px`，**垂直方向（top/bottom）仍然继承 0**。
+
+iOS WebView 对中文字首行顶部的反锯齿渲染需要 1-2px 的 overshoot 空间，否则"测"字右上的"刀点"、"试"字右上的"弋"点会被 textarea 的 content box 上边缘裁掉，视觉上像文字被"剪了一刀"。
+
+#### 修复
+移动端 `.memoria-input` 补上：
+```css
+padding-top: 2px !important;
+padding-bottom: 2px !important;
+```
+2px 的垂直安全区足够让 iOS WebView 的反锯齿完整呈现；line-height:1.6 已经提供行间缓冲，所以不需要更大。纯 CSS，~2 行。
+
+---
+
 ## v1.4.15（2026-05-06 凌晨）
 
 ### 🏪 为提交 Obsidian 官方插件商店做准备
