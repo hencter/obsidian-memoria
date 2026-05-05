@@ -6,6 +6,32 @@
 
 ---
 
+## v1.4.17（2026-05-06 凌晨）
+
+### 🔗 修复：`[[双链]]` 和 `#标签` 点击没反应
+
+#### 症状
+在 memo 里写 `[[某笔记]]`，正文里能渲染成可点击的蓝色下划线链接，但点上去**没有任何反应**——既不跳转，也不打开新 tab。`#标签` 同样点了无效。
+
+#### 原因
+`MarkdownRenderer.render()` 只负责把 markdown 转成静态 DOM（`<a class="internal-link" data-href="...">`），**不会自动绑点击事件**——OB 原生 editor/preview 是靠 MarkdownView 内部的事件委托机制做的。自定义 ItemView 里用 MarkdownRenderer 必须自己补这个逻辑。之前这段代码一直缺，所以所有渲染出来的链接都是"死"的。
+
+#### 修复
+新增 `bindInternalLinks(body, memo)` 方法，在每张卡片的正文容器上挂一个**事件委托**，捕获：
+
+- `a.internal-link` → 调 `app.workspace.openLinkText(href, memo.file, newLeaf?)`
+  - 普通单击：当前 tab 打开目标笔记
+  - `Ctrl/Cmd+click` 或中键：新 tab 打开
+- `a.tag` → 调 OB 原生 global-search 按 `tag:#xxx` 搜索（等价于侧栏搜索面板）
+- `a.external-link` → 放行给 OB 的外链处理（尊重用户的"外链行为"偏好）
+
+事件委托只在卡片创建时挂一次，所有当前/未来的链接都会走这个处理，零性能开销。
+
+#### 对 MarkdownRenderer 缓存的影响
+v1.4.11 引入的 DocumentFragment 缓存依然有效，因为事件绑在 `body`（缓存外层）而不是链接本身上，缓存命中时 clone 出的新 DOM 依然会走到委托处理。
+
+---
+
 ## v1.4.16（2026-05-06 凌晨）
 
 ### 📱 手机端输入框首行顶部笔画被"咬掉"（续）
