@@ -6,6 +6,61 @@
 
 ---
 
+## v2.0.4（2026-05-06 下午）
+
+### 🌐 i18n 三个扩展视图也国际化了
+
+之前 i18n 只覆盖主视图。用户反馈切英文后**数据报告、年度全景、导出 HTML**这三个扩展页面依然全中文，造成"界面割裂感"。这一版补齐：
+
+#### 📊 数据报告（stats.ts）
+- **页面标题**：`Memoria 数据报告` → `Memoria Stats`
+- **空状态**：`还没有笔记，赶紧去写一条吧` → `No memos yet, write your first one`
+- **统计卡**：`条笔记 / 字 / 活跃天 / 总跨度` → `memos / words / active days / days total`
+- **分区标题**：`🔥 全年活跃度 / 📅 月度分布 / ☁️ 标签云 / 🏷️ 最常用标签 Top 10 / ⏰ 一天中你什么时候写得最多 / 🌟 有趣的发现` 全部英文化
+- **年份导航**：`上一年 / 下一年` aria-label；`2026 年` → `2026`
+- **图例**：`少 / 多` → `less / more`
+- **月度副标题**：`2026 年共 N 条` → `2026 · N memos`
+- **柱图 tooltip**：时间段和月份的 hover 提示
+- **峰值描述**：`📝 你最喜欢在 HH:00 写笔记，至今累计 N 条（P%）` → `📝 You write most at HH:00 (N memos, P%)`
+- **"有趣的发现"池**：英文模式下显示一行友好提示**"Insights text is only available in Chinese for now"**，等专业翻译再做。中文模式保留原有诗意文案池不变（"话痨日""Memoria 有点想你"等）
+
+#### 📅 年度全景（year-panorama.ts）
+- **页面标题**：`Memoria · 年度全景` → `Memoria · Year panorama`
+- **星期头**：`日 一 二 三 四 五 六` → `S M T W T F S`
+- **今年按钮**：`今年` → `This year`
+- **上/下一年** aria-label 走 i18n
+- **底部统计**：`2026 年共 N 条笔记 · 活跃 M 天` → `2026 · N memos total · M active days`
+
+#### 📤 导出 HTML 页面
+- **副标题**：`2026年5月6日 周三 15:00 导出` → `Exported Wed, 5/6/2026 15:00`
+- **页脚**：`由 Memoria · Obsidian Plugin 导出` → `Exported by Memoria · Obsidian Plugin`
+- **日期分组右侧统计**：`N 条` → `N memos`
+- **统计条 label**：memos / days / tags 走 i18n
+- **HTML lang 属性**：根据 UI 语言设 `zh-CN` 或 `en-US`（辅助屏幕阅读器）
+- **md 导出**：标题和摘要走 i18n
+
+### 🐛 修复：导出 HTML 后打开一个空白标签页
+
+根因：HTML 文件 Obsidian 默认**不渲染**，`openFile()` 会创建一个空白 tab 让用户困惑。
+
+修复：`doExport` 按格式区分后续行为：
+- **md / json** → 导出后自动在新 tab 打开（Obsidian 能读）
+- **html** → 只发 Notice 告知保存路径（用户自行在浏览器打开 `Memoria/exports/*.html`）
+
+### 🐛 修复：热力图 hover 有两个弹窗重叠
+
+根因：格子同时设了**原生 `title` 属性**和**自定义 tooltip**，浏览器的原生 tooltip 和自定义 tooltip 会**同时显示**——一个细长白条在上、一个富 tooltip 在下，视觉重叠。
+
+修复：
+- **有笔记的格子**：去掉原生 `title`，只用自定义 tooltip（展示首 2 条预览）
+- **空格子**：依然保留 `title`，只显示"日期  0 memos"（便宜又安静）
+- tooltip 里的 "N 条" 也走 i18n
+
+### 📦 体积
+main.js 144.7 → 149.8 KB（+5 KB，stats / year-panorama 的字典 + 新文案）。
+
+---
+
 ## v2.0.3（2026-05-06 下午）
 
 ### 🌐 i18n 剩余盲区全部扫清
