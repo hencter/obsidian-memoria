@@ -3363,6 +3363,15 @@
 .memoria-list.is-compact .memoria-card-body p {
   margin: 0.3em 0;
 }
+/* v2.0.5: 紧密模式下 card-body overflow: hidden 会裁掉 Obsidian task-list
+   复选框的负 margin-left（默认复选框会溢出到 li 左侧）
+   → 给 ul.contains-task-list 加左内边距，把复选框整体向右挤出来 */
+.memoria-list.is-compact .memoria-card-body ul.contains-task-list {
+  padding-left: 1.8em;
+}
+.memoria-list.is-compact .memoria-card-body ul.contains-task-list li.task-list-item input[type="checkbox"] {
+  margin-left: 0;
+}
 
 /* Vim 閫変腑鎬?*/
 .memoria-card.is-vim-selected {
