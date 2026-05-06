@@ -3333,6 +3333,13 @@
 .memoria-card.memoria-mood-angry {
   box-shadow: inset 3px 0 0 0 #c77764;
 }
+/* v2.0.1: 新增 fear（暗紫）和 tired（浅灰棕）两个维度 */
+.memoria-card.memoria-mood-fear {
+  box-shadow: inset 3px 0 0 0 #6e5a8f;
+}
+.memoria-card.memoria-mood-tired {
+  box-shadow: inset 3px 0 0 0 #a89684;
+}
 /* 缃《 / 鏀惰棌宸茬粡鏈?box-shadow锛屽拰 mood 鍙兘鍐茬獊銆俶ood 鐢?left-inset锛?   缃《鐢?border-top锛屼笉鍐茬獊锛涘拰 is-pinned 骞跺垪鏃朵紭鍏?mood 鐨勫乏鑹叉潯銆?*/
 
 /* 绱у噾瑙嗗浘妯″紡锛氶檺鍒舵瘡寮犲崱姝ｆ枃楂樺害 + 鍥剧墖缂╁皬 */
