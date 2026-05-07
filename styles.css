@@ -1287,6 +1287,28 @@
   color: var(--text-normal);
 }
 
+/* v2.0.8: 移动端编辑模式下，datetime-local 输入框在窄屏会挤占"取消/发送"按钮的位置，
+ *   导致按钮被遮挡或挤出视口。只在进入编辑模式（submit-wrap 有 .is-editing 态）下
+ *   把 datetime-input 换行到上方自成一行，两个按钮保持右对齐，手机端稳定可见。
+ *   桌面端保持原样单行布局。
+ *   注意：检测编辑态用 :not(.memoria-hidden) 即可——datetime-input 只在编辑模式下会被去掉 memoria-hidden 类 */
+@media (max-width: 680px) {
+  .memoria-submit-wrap {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: 8px;
+  }
+  .memoria-edit-datetime:not(.memoria-hidden) {
+    /* 编辑态下独占一整行 */
+    flex-basis: 100%;
+    order: -1;
+    padding: 8px 10px;
+    font-size: 14px;
+    /* 触控友好：最小高度 36px 保证好点 */
+    min-height: 36px;
+  }
+}
+
 /* 正在编辑的卡片：高亮边框 */
 .memoria-card.is-editing {
   border-color: var(--interactive-accent);

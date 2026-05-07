@@ -6,6 +6,45 @@
 
 ---
 
+## v2.0.8（2026-05-07 中午）
+
+### 🐛 修复移动端编辑时日期选择器遮挡取消/发送按钮
+
+用户反馈：手机端编辑已有笔记进入编辑模式后，datetime-local 输入框（显示 `2026-05-07 12:54`）会把右侧的「取消」「发送」按钮挤出视口或遮挡，导致完全点不到按钮，只能退出重开。
+
+#### 根因
+输入卡片底栏的 DOM 结构：
+```
+.memoria-input-toolbar (flex, space-between)
+├── .memoria-input-tools (左侧 5-6 个工具图标)
+└── .memoria-submit-wrap (右侧：[datetime-input] [取消] [发送])
+```
+桌面端屏幕宽，右侧 3 个元素一行能放下。但手机端（< 680px）左右两组元素加起来超过屏宽：
+- datetime-local 原生控件至少需要 130-150px 显示「YYYY-MM-DD HH:MM」
+- 再加两个按钮共约 120px
+- 加上左侧工具栏 ≈ 200px
+- 总宽度超过常见手机屏（375-428px）
+
+浏览器 flex 默认不换行，submit-wrap 会溢出撑大父容器，于是按钮被挤到屏幕外。
+
+#### 修复
+在 `@media (max-width: 680px)` 下给 `.memoria-submit-wrap` 加 `flex-wrap: wrap`，编辑模式下 `.memoria-edit-datetime` 用 `flex-basis: 100% + order: -1` 强制独占一行并置顶。效果：
+
+**桌面端**（不变）：
+```
+[datetime] [取消] [发送]
+```
+
+**移动端（编辑模式）**：
+```
+[datetime           全宽         ]
+                      [取消] [发送]
+```
+
+同时把移动端的 datetime-input 行内 padding 从 4px 加到 8px、字号从 12 加到 14，保证触控点按友好。
+
+---
+
 ## v2.0.7（2026-05-06 傍晚）
 
 ### 🔍 全量代码审查 + 5 处高价值修复
