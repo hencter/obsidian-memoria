@@ -1288,18 +1288,32 @@
 }
 
 /* v2.0.8: 移动端编辑模式下，datetime-local 输入框在窄屏会挤占"取消/发送"按钮的位置，
- *   导致按钮被遮挡或挤出视口。只在进入编辑模式（submit-wrap 有 .is-editing 态）下
- *   把 datetime-input 换行到上方自成一行，两个按钮保持右对齐，手机端稳定可见。
- *   桌面端保持原样单行布局。
- *   注意：检测编辑态用 :not(.memoria-hidden) 即可——datetime-input 只在编辑模式下会被去掉 memoria-hidden 类 */
+ *   导致按钮被遮挡或挤出视口。只在进入编辑模式下把 datetime-input 换行到上方
+ *   自成一行，两个按钮保持右对齐，手机端稳定可见。桌面端保持原样单行布局。
+ *
+ * v2.0.9: 上一版 datetime 独占一行但仍在 submit-wrap 内部（submit-wrap 被父
+ *   `justify-content: space-between` 推到最右），导致 datetime 视觉上贴右、
+ *   和下方左对齐的工具列错位。
+ *   最终方案：用已有的 .memoria-input-card.is-editing 类（进入编辑模式时会加）
+ *   作为选择器前缀（兼容老 WebView，不依赖 :has()）。
+ *   编辑模式下 toolbar 允许 wrap，submit-wrap 独占满宽一行，
+ *   datetime 左对齐（和下方工具列左缘对齐），「取消/发送」独占第二行右对齐。
+ */
 @media (max-width: 680px) {
-  .memoria-submit-wrap {
+  .memoria-input-card.is-editing .memoria-input-toolbar {
+    /* 让 toolbar 可换行，submit-wrap 整块下移到第二行 */
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .memoria-input-card.is-editing .memoria-submit-wrap {
+    /* 独占整行，内部再 wrap 一次：datetime 一行、按钮一行 */
+    width: 100%;
     flex-wrap: wrap;
     justify-content: flex-end;
     row-gap: 8px;
   }
-  .memoria-edit-datetime:not(.memoria-hidden) {
-    /* 编辑态下独占一整行 */
+  .memoria-input-card.is-editing .memoria-edit-datetime {
+    /* datetime 独占第一行，左对齐（flex-basis:100% 铺满后自身内容就是左起） */
     flex-basis: 100%;
     order: -1;
     padding: 8px 10px;
