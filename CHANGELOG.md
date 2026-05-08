@@ -52,38 +52,60 @@ v2.0.16 发版后继续排查 Ctrl+Enter 失效问题，通过更精确的 `wind
 - 顶部分隔线也轻微淡化
 
 **触发展开**（任一条件满足即展开）：
-- 鼠标 hover 整张卡，**停留 ≥150ms**（桌面端，防快速掠过误触发）
-- 输入框聚焦（桌面+移动通用，主动操作不需驻留检测）
+- 🎯 **点击输入框**（焦点进入）—— 桌面/移动端通用主入口
 - `has-content` —— 已经有内容（草稿/工具栏插入的标签等）→ 强制展开，避免用户切去看笔记时草稿区域意外塌下去
 - `is-editing` —— 进入编辑某条 memo 模式
 - `dragging` —— 正在拖图片进来
 
-**动画**：1.1s `cubic-bezier(0.4, 0, 0.2, 1)`（Material Design 标准缓动），悠闲丝滑感对齐 flomo。
+**不用 hover 触发的设计决策**：鼠标在笔记列表 ↔ 工具栏间穿梭经常路过输入框，hover 会带来大量视觉噪音；点击 = 明确写作意图，两者不应同等对待。这也让桌面/移动端体验完全一致（移动端本来就没 hover 概念）。
+
+**动画**：0.7s `cubic-bezier(0.4, 0, 0.2, 1)`（Material Design 标准缓动），兼顾"看得出动画"和"不拖沓"。
 
 **收益**：阅读区垂直空间多出约 30px，长列表浏览体验更连贯。
 
-#### 实现踩坑全记录（这个动画总共调了 8 轮才完美）
+#### 实现踩坑全记录（这个动画总共调了 13 轮才落定）
 
-1. **iter1 (CSS-only)**：`:hover` / `:focus-within` 直接驱动 `min-height` transition。理论很美，**实际 CSS 完全没生效** —— styles.css 里第 505 行的旧规则 `transition: height 0.08s ease` 写在新规则之后，CSS 后写覆盖前写，新的 0.85s transition 被压死了。诊断脚本读 `getComputedStyle().transition` 才看到真相。
+1. **iter1 (CSS-only)**：`:hover` / `:focus-within` 直接驱动 `min-height` transition。理论很美，**实际 CSS 完全没生效** —— styles.css 里第 505 行的旧规则 `transition: height 0.08s ease` 写在新规则之后，CSS 后写覆盖前写，新的 transition 被压死了。诊断脚本读 `getComputedStyle().transition` 才看到真相。
 
-2. **iter2 (height vs min-height)**：删掉旧规则后 transition 终于挂上 `min-height: 0.85s`，但视觉**仍无变化**。原因：JS 的 `autoResizeInput()` 用 inline `style.height = "47px"` 压住了 CSS min-height（inline 优先级 > stylesheet）。改造方案：**JS 只在内容超过展开态最小值时才设 inline height，其余情况清空让 CSS min-height 接管**。
+2. **iter2 (height vs min-height)**：删掉旧规则后 transition 终于挂上 `min-height`，但视觉**仍无变化**。原因：JS 的 `autoResizeInput()` 用 inline `style.height = "47px"` 压住了 CSS min-height（inline 优先级 > stylesheet）。改造方案：**JS 只在内容超过展开态最小值时才设 inline height，其余情况清空让 CSS min-height 接管**。
 
 3. **iter3 (textarea rows quirk)**：min-height 终于驱动渲染高度变化，但展开依然像"突然弹起"。原因：textarea 默认 `rows=2`，浏览器对 textarea 的渲染高度 = `max(min-height, rows×lh, content)`，rows=2 ≈ 44.79px > min-height 起点 40px，导致动画前段视觉无变化。把 textarea 的 `rows` 改为 `1` 让 min-height 全程主导。
 
-4. **iter4 (打字时不卡顿)**：`min-height` 和 `height` 都挂 1.1s transition 后，连续打字时每多一行就要等 1.1s 才长高，体验灾难。解决：JS 在 `autoResizeInput()` 设 inline height 前临时加 `.memoria-no-transition` class，下一帧通过 `requestAnimationFrame` 移除。
+4. **iter4 (打字时不卡顿)**：`min-height` 和 `height` 都挂慢 transition 后，连续打字时每多一行就要等很久才长高，体验灾难。解决：JS 在 `autoResizeInput()` 设 inline height 前临时加 `.memoria-no-transition` class，下一帧通过 `requestAnimationFrame` 移除。
 
-5. **iter5 (Chromium :hover bug)**：动画时长终于走对了（rAF 监测到完整 1.1s 曲线），但**真实鼠标 hover 触发时只跑 ~30% 路程就跳到终点**（数据：`hover=true h=65.6 → +17ms h=96.0`）。原因：**Chromium 对 textarea 在 `:hover` 伪类驱动下的 transition 有严重 bug**，会跳过大部分动画路程。改用 JS 加 class（`.is-hovering`/`.is-focused`）替代 `:hover`/`:focus-within` 伪类。
+5. **iter5 (Chromium :hover bug)**：动画时长终于走对了（rAF 监测到完整曲线），但**真实鼠标 hover 触发时只跑 ~30% 路程就跳到终点**（数据：`hover=true h=65.6 → +17ms h=96.0`）。原因：**Chromium 对 textarea 在 `:hover` 伪类驱动下的 transition 有严重 bug**，会跳过大部分动画路程。改用 JS 加 class（`.is-hovering`/`.is-focused`）替代 `:hover`/`:focus-within` 伪类。
 
-6. **iter6 (瞬移进入跳变)**：换成 class 后慢速进入完美 1.1s，但**鼠标快速跳入**输入框时还是瞬时跳变。原因：浏览器在一帧内同时完成"光标到达 + 事件派发 + class 添加 + 高度重排"，transition 起点终点被合成成同一帧，浏览器优化掉了动画。先尝试用 `requestAnimationFrame` 推迟 class 添加 —— 大部分情况能修，但仍有概率被合成。
+6. **iter6 (瞬移进入跳变)**：换成 class 后慢速进入完美，但**鼠标快速跳入**输入框时仍瞬时跳变。原因：浏览器在一帧内同时完成"光标到达 + 事件派发 + class 添加 + 高度重排"，被合成成同一帧。先尝试用 `requestAnimationFrame` 推迟一帧。
 
-7. **iter7 (鼠标驻留检测)**：最终方案。`mouseenter` 不立刻加 class，启动 150ms `setTimeout`；如果 150ms 内 `mouseleave` 触发就清掉计时器。这样：
-   - 鼠标快速掠过路过 → 完全无反应（视觉清爽）
-   - 慢速进入并停留 → 150ms 后开始 1.1s 展开（150ms 是 tooltip 级延迟，人眼无感）
-   - 瞬移进入并停留 → 同样 150ms 后展开（顺带把 iter6 的合成跳变问题解决了）
+7. **iter7 (鼠标驻留检测)**：`mouseenter` 不立刻加 class，启动 150ms `setTimeout`；如果 150ms 内 `mouseleave` 触发就清掉计时器。技术上慢速/瞬移进入都丝滑了。
 
-8. **iter8 (代码质量收尾)**：把 8 轮 iter 的临时注释合并、过时数值更新、`is-hovering` 计时器在 `onClose()` 里清理避免内存泄漏。
+8. **iter8 (代码质量收尾)**：临时注释合并、过时数值更新、`is-hovering` 计时器在 `onClose()` 里清理避免内存泄漏。
 
-**关键经验**：浏览器对 transition 有大量"优化合成"的隐藏行为，特别是 textarea 这种 form control 在伪类驱动下的表现尤其不可预测。**遇到"动画明明写对了但视觉就是不对"时，第一时间用 DevTools 量 `getComputedStyle()` 和 `getBoundingClientRect()` 的时间序列**，而不是反复猜测。
+9. **iter9 (产品决策反转)**：⭐ 用户提出**"鼠标滑过默认不展开，只有点击聚焦时才展开"** 更合理。复盘后发现这才是真正合理的体验：
+   - 鼠标在笔记列表 ↔ 工具栏间穿梭经常路过输入框，hover 触发会带来视觉噪音
+   - 点击 = 明确的写作意图；hover = 只是路过，两者不应同等对待
+   - 桌面/移动端体验完全一致（移动端本来就没有 hover 概念）
+
+   把 mouseenter/mouseleave 监听全部删除、`inputHoverDelayTimer` 字段移除、CSS 选择器从 `:not(.is-hovering):not(.is-focused)` 简化成 `:not(.is-focused)`。代码反而更干净了。
+
+10. **iter10 (focus 路径瞬时跳变)**：移除 hover 后发现 focus 触发的展开还是瞬时跳变，并非平滑动画。尝试 inline `min-height` 锁起点 + reflow + rAF 切 class 的双步策略 —— **但仍是瞬变**。
+
+11. **iter11 (双 rAF)**：升级方案，单 rAF 不够就用双 rAF，确保 reflow 完全 commit 之后才切 class —— **依然瞬变**！
+
+12. **iter12 (真凶大白：主题 CSS 覆盖)**：⭐⭐⭐ 用更详细的诊断脚本读 `getComputedStyle().transitionProperty`，发现 textarea 当前的 transition **居然是 `box-shadow, border 0.15s`** 而不是我们写的 `min-height, height 1.1s`！
+
+    **真凶**：Obsidian 主题用 `body.theme-light textarea` 这种链式选择器（权重 0,0,1,1）覆盖了我的 `.memoria-input { transition: ... }`（权重 0,0,1,0）。`min-height` 根本不在 textarea 的 transition-property 列表里 → 被当成"无动画属性"瞬时跳变。
+
+    解法：**给 transition 加 `!important`** 强制压过主题。一行代码解决前 11 轮迭代的所有"瞬变"症状。同时把 iter10/11 的双 rAF + reflow 全部回退（根本就不需要，是误判）。
+
+13. **iter13 (动画时长定型)**：试过 0.22s / 0.55s / 0.85s / 1.1s 多档之后，最终落在 **0.7s** —— 看得出动画但不拖沓的甜蜜点。
+
+**关键经验**：
+- 浏览器 transition 行为有大量隐藏陷阱：CSS 规则覆盖、伪类驱动 bug、inline style 优先级、textarea rendered height 算法等等。**遇到"动画明明写对了但视觉就是不对"时，第一时间用 DevTools 量 `getComputedStyle().transitionProperty` 和 `transitionDuration`**——本次真凶是主题用 `textarea` type 选择器的 transition 覆盖了 plugin CSS，但前 11 轮迭代都没看 transition 实际生效值，全在猜测路径上做无用功。
+- 写插件时给所有"必须生效"的 transition / 关键属性加 `!important` 是务实选择 —— **第三方主题对 form 控件类元素的覆盖是常态而非例外**。
+- 工程实现做得对 ≠ 产品决策做得对。技术上把 hover 触发的所有边缘情况都修干净了，但用户的一句"鼠标滑过默认不展开是不是更合理"直接让前 8 轮迭代里的一半工作变成沉默成本。**所有"hover 还是 click 触发"这类交互决策应该在写代码前先想清楚**。
+
+
 
 
 

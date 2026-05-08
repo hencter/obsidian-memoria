@@ -412,11 +412,13 @@
  *   优雅展开。让阅读区获得更多垂直空间，对齐 flomo 网页端体验。
  *
  * 展开态触发条件（任一即展开）：
- *   1. :hover           - 鼠标悬停整张卡（桌面端）
- *   2. :focus-within    - 输入框聚焦（桌面+移动端通用）
- *   3. .has-content     - 输入框有内容（草稿/插入的标签等）
- *   4. .is-editing      - 进入编辑某条 memo 的模式
- *   5. .dragging        - 正在拖拽图片到输入框
+ *   1. .is-focused      - 输入框获焦点（点击或 Tab 进入），桌面/移动端通用主入口
+ *   2. .has-content     - 输入框有内容（草稿/插入的标签等）→ 写一半切去看笔记不会塌下去
+ *   3. .is-editing      - 进入编辑某条 memo 的模式
+ *   4. .dragging        - 正在拖拽图片到输入框
+ *
+ *   不用 hover 触发：鼠标在笔记列表/工具栏间穿梭经常路过输入框，hover 会带来视觉噪音；
+ *   点击 = 明确写作意图，hover = 只是路过，两者不应同等对待。
  *
  * 默认收起态视觉规则：
  *   - textarea min-height 收紧到 40px（约 1 行 + 余量）
@@ -426,8 +428,8 @@
  *
  * 展开态：所有规则恢复正常值（即原 v2.0.16 及之前的视觉表现）
  *
- * transition 时长 1.1s + Material Design 标准缓动曲线 cubic-bezier(0.4, 0, 0.2, 1)，
- *   悠闲丝滑感对齐 flomo 网页端体验。
+ * transition 时长 0.7s + Material Design 标准缓动曲线 cubic-bezier(0.4, 0, 0.2, 1)，
+ *   兼顾"看得出动画"和"不拖沓"。
  *   配合 JS 的 150ms 鼠标驻留检测（防快速掠过误触发）和帧间 class 切换
  *   （绕过 Chromium 对 textarea :hover 伪类的 transition 短路 bug）。
  */
@@ -445,14 +447,20 @@
    *       瞬时完成的（不跟随 min-height 过渡）。这是 textarea 特有的行为。
    *   为避免 JS autoResizeInput 设置 inline height 时触发慢动画，打字阶段 JS 会在
    *   设置前临时禁用 transition（transitions-none class，见下方）。
-   *   v2.0.17-iter5: 0.85s → 1.1s，更悠闲的展开体验。
+   *   v2.0.17-iter12: !important —— Obsidian 主题（如 ITS Theme / AnuPpuccin 等）
+   *     会用 `textarea { transition: box-shadow ... }` 这种基础 type 选择器
+   *     覆盖我们的 transition（实测权重比 .memoria-input 高，因为主题用了
+   *     `body.theme-light textarea` 这种链式选择器，权重 0,0,1,1 > 0,0,1,0）。
+   *     不加 !important 时 getComputedStyle 显示 transition 变成主题的
+   *     `box-shadow, border 0.15s`，min-height 0s 就触发瞬时跳变。
+   *   v2.0.17-iter13: 时长 1.1s → 0.7s，看得出动画但不拖沓。
    */
   transition:
-    min-height 1.1s cubic-bezier(0.4, 0, 0.2, 1),
-    height 1.1s cubic-bezier(0.4, 0, 0.2, 1);
+    min-height 0.7s cubic-bezier(0.4, 0, 0.2, 1),
+    height 0.7s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 /* v2.0.17: 输入时（input 事件触发 autoResizeInput）临时禁用动画，
- *   避免 textarea 随内容长高时被 0.85s 慢动画拖住手感。
+ *   避免 textarea 随内容长高时被 0.7s 慢动画拖住手感。
  *   JS 会在设 inline height 前加这个 class，一帧后移除。 */
 .memoria-input.memoria-no-transition {
   transition: none !important;
@@ -460,31 +468,35 @@
 .memoria-input-toolbar {
   /* v2.0.17: 工具栏整体淡入淡出 */
   transition:
-    opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1),
-    border-top-color 1.1s ease;
+    opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1),
+    border-top-color 0.7s ease;
 }
 .memoria-submit-btn {
   /* v2.0.17: 发送按钮饱和度淡入 */
   transition:
     background 0.12s,
-    filter 1.1s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    filter 0.7s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* 收起态（默认）—— textarea 收矮 + 工具栏淡化 + 发送按钮褪色
- * v2.0.17-iter6: 用 .is-hovering（JS 控制）替代 :hover 伪类。
- *   原因：Chromium 对 textarea 元素在 :hover 伪类触发的 transition 有诡异表现
- *   （动画跑到约 30% 距离就跳变到终点，不是 1.1s 全程），换成 class 触发就正常。
- *   :focus-within 也有类似风险，保留的同时也用 JS 加 .is-focused 兜底。
+ * v2.0.17-final: 仅在用户**主动点击**输入框（focus）时展开，hover 不触发。
+ *   设计理由：鼠标在笔记列表 ↔ 工具栏间穿梭经常路过输入框，hover 会带来大量
+ *   视觉噪音；点击 = 明确写作意图，hover = 只是路过，两者不应同等对待。
+ *   桌面和移动端体验也因此完全一致（移动端本来就没有 hover 概念）。
+ *
+ *   不用 :focus-within 伪类的原因：Chromium 对 textarea 在伪类驱动下的
+ *   transition 有 bug（动画只跑 30% 路程就跳到终点），换成 JS class
+ *   .is-focused（focus/blur 事件触发）能让 0.7s transition 完整走完。
  */
-.memoria-input-card:not(.is-hovering):not(.is-focused):not(:focus-within):not(.has-content):not(.is-editing):not(.dragging) .memoria-input {
+.memoria-input-card:not(.is-focused):not(.has-content):not(.is-editing):not(.dragging) .memoria-input {
   min-height: 40px;
 }
-.memoria-input-card:not(.is-hovering):not(.is-focused):not(:focus-within):not(.has-content):not(.is-editing):not(.dragging) .memoria-input-toolbar {
+.memoria-input-card:not(.is-focused):not(.has-content):not(.is-editing):not(.dragging) .memoria-input-toolbar {
   opacity: 0.55;
   border-top-color: color-mix(in srgb, var(--background-modifier-border) 50%, transparent);
 }
-.memoria-input-card:not(.is-hovering):not(.is-focused):not(:focus-within):not(.has-content):not(.is-editing):not(.dragging) .memoria-submit-btn {
+.memoria-input-card:not(.is-focused):not(.has-content):not(.is-editing):not(.dragging) .memoria-submit-btn {
   opacity: 0.7;
   filter: saturate(0.7);
 }
@@ -523,7 +535,7 @@
   outline: none !important;
   overflow-y: auto;
   /* v2.0.17: 原 `transition: height 0.08s ease` 已移到上方的 .memoria-input 规则块里，
-   *   并改为 min-height 0.85s（渐进式披露动画）。如果这里再声明 transition，会把
+   *   并改为 min-height + height 0.7s（渐进式披露动画）。如果这里再声明 transition，会把
    *   上方的新规则覆盖掉 —— 这就是当时动画不生效的直接原因。
    */
 }
