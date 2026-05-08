@@ -6,6 +6,25 @@
 
 ---
 
+## v2.0.15（2026-05-08 傍晚 · 紧急修复）
+
+### 🚨 修复 v2.0.14 导致的整个视图白屏
+
+v2.0.14 用了 `this.scope.register(...)` 想注册 Scope 级快捷键，但 **ItemView 根本没有 `scope` 属性**（那是 Modal / App 独有的）。结果 `onOpen` 抛 TypeError、整个 Memoria 视图一片空白。**我的锅，对不起！**
+
+#### 正确的解法
+放弃 Scope API，改用 DOM capture 阶段监听：
+
+```ts
+this.registerDomEvent(this.contentEl, "keydown", handler, true /* capture */);
+```
+
+在 contentEl 上用 **capture 阶段**监听比 bubble 阶段早触发，也比 document 级的 Obsidian hotkey 监听早执行。拦到 Ctrl/Cmd+Enter 后 `stopImmediatePropagation()` 阻止事件继续传播，就能抢在 Obsidian 全局 hotkey（打开链接）之前响应。
+
+同样的三层保护：焦点在视图内 + 非 IME 组合态 + event 三连阻止（prevent + stop + stopImmediate）。
+
+---
+
 ## v2.0.14（2026-05-08 傍晚）
 
 ### 🐛 修复 Ctrl/Cmd+Enter 发送快捷键失效
