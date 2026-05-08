@@ -6,6 +6,41 @@
 
 ---
 
+## v2.0.16（2026-05-08 深夜）
+
+### ⌨️ 发送快捷键默认改为 Enter（对齐 flomo/Memos）
+
+#### 背景
+用户反馈 Ctrl+Enter 发送失效。通过开发者工具 capture 阶段诊断拿到铁证：
+
+```
+[STAGE] window-capture | isComposing=false | defaultPrevented=TRUE | cancelBubble=TRUE
+```
+
+事件到我们最顶层 window-capture 监听器时，**`defaultPrevented` 和 `cancelBubble` 已经是 true** —— 说明某个优先级比我们更高的监听器（Obsidian 内部命令 "Open link under cursor in new tab" 或其他插件的 document-level capture）已经吞掉了 Ctrl+Enter。而 Ctrl+Shift+Enter 因为 Shift 键组合未被任何对手注册，能一路通畅到达我们的处理器。
+
+由于是**运行时被外部抢走**，任何 CSS/代码层的修复都无法保证在所有环境下稳定生效。
+
+#### 方案：默认改用 Enter 发送 + 可配置
+
+**新默认行为**：
+- `Enter` → 发送（IME 组合态下忽略，避免干扰中文输入法确认候选词）
+- `Shift+Enter` → 换行
+- `Ctrl/Cmd+Enter` → 兼容（对默认肌肉记忆友好，能不能触发取决于环境）
+
+**新增设置项**「发送快捷键」：
+- `Enter 发送（Shift+Enter 换行）` ⭐ 推荐，对齐 flomo/Memos/Bear
+- `Ctrl/Cmd+Enter 发送（Enter 换行）` 老用户习惯模式
+
+默认值为 `enter`。
+
+#### 其他兼容处理
+- `shouldSendOnKeydown()` 统一判断发送逻辑，带 IME 保护（纯 Enter 发送时遇 `isComposing === true` 不响应）
+- 列表智能续行（- / 1. / - [ ]）**只在 ctrl-enter 模式下启用**，因为默认模式 Enter 已经用于发送
+- QuickCapture 弹窗同步支持两种模式
+
+---
+
 ## v2.0.15（2026-05-08 傍晚 · 紧急修复）
 
 ### 🚨 修复 v2.0.14 导致的整个视图白屏
