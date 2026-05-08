@@ -6,6 +6,40 @@
 
 ---
 
+## v2.0.17（2026-05-08 深夜 · 接着 v2.0.16）
+
+### ⌨️ 默认回到 Ctrl+Enter 发送 + 真相提示
+
+v2.0.16 发版后继续排查 Ctrl+Enter 失效问题，通过更精确的 `window` capture 诊断（Enter / Ctrl+Enter / Ctrl+Shift+Enter 三键对照），锁定了真正的凶手：
+
+> **Obsidian 内置命令「在新标签页中打开光标处链接」默认占用了 Ctrl+Enter**
+
+但这个坑点的戏剧性在于：**Obsidian 的快捷键页面按键盘图标搜 Ctrl+Enter 根本搜不到它**（Obsidian 的 bug，对这种"需要光标在链接上才生效"的命令在按键搜索里被过滤掉了）。必须手动滑到列表对应位置才能看到。
+
+铁证诊断数据：
+- `Ctrl+Enter` → window-capture 阶段就 `defaultPrevented=TRUE`，`document` 根本收不到（被 Electron/Obsidian 主程序命令层在 JS 监听器之前吞掉）
+- `Enter` → 三层都能正常到达
+- `Ctrl+Shift+Enter` → 三层都能正常到达（该组合键未被任何 Obsidian 命令占用）
+
+由此证明：**和第三方插件无关**，是 Obsidian 主程序本身的默认绑定；解绑后 Ctrl+Enter 立刻恢复。
+
+#### 本次调整
+
+1. **默认值改回 `ctrl-enter`**（对齐 flomo 实际体验，多数用户期望）
+2. **设置项描述重写**：明确告诉用户如果 Ctrl+Enter 无效，请到 Obsidian 设置 → 快捷键 列表中找到「在新标签页中打开光标处链接」并点 × 解除绑定（并特别说明按键搜索搜不到、需要手动滑动查找）
+3. 删除了旧文案中对 flomo / Smart Composer 等其他产品名的提及，保持描述中性客观
+
+#### 开发复盘
+
+- v2.0.14：想修 Ctrl+Enter，手一抖写了 `this.scope.register(...)` 把整个视图搞白屏了
+- v2.0.15：紧急救火
+- v2.0.16：根据当时不完整的诊断数据误判为"插件冲突 + 无解"，草率把默认改成了 Enter
+- v2.0.17：拿到完整诊断，锁定是 Obsidian 自带命令占用，解绑即恢复，默认值改回更符合直觉的 Ctrl+Enter
+
+**教训**：在 JS 监听器全部 `defaultPrevented=true` 时，不要急于归咎于"运行时拦截无法修复"，应该先把 Obsidian 自身的 Hotkeys 列表**从头滑到底**查一遍（不要只信搜索框）。
+
+---
+
 ## v2.0.16（2026-05-08 深夜）
 
 ### ⌨️ 发送快捷键默认改为 Enter（对齐 flomo/Memos）
