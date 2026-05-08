@@ -6,6 +6,110 @@
 
 ---
 
+## v2.0.18（2026-05-09 凌晨 · 收尾打磨）
+
+接着 v2.0.17 发版后用户反馈的几个细节问题，做一轮收尾打磨。三个看似无关的小修，根因恰好串起了"渲染 / 解析 / 视觉"三条不同维度。
+
+### 🐛 修复：发送笔记后输入框不收回收起态
+
+v2.0.17-iter14 已经在 `submitMemo` 末尾调过 `inputEl.blur()` 并重排了执行顺序（先 blur 后 autoResize），原以为修好了。但用户实测仍然不收回，DevTools 诊断显示：is-focused class 已正确移除，但 textarea 的 inline `height` 卡死在 98px。
+
+进一步分析后发现根因不在 focus 状态，而在 `autoResizeInput()` 自身的 scrollHeight 测量逻辑：
+
+不同用户的字体 / `line-height` / `padding` 组合下，**空 textarea 在 `height:auto` 状态下的 scrollHeight 不一定等于 lineHeight × 1**——实测某些字体环境下空内容会算出 96px，再加 2px 误差吸收 = 98px。
+
+而 `autoResizeInput` 的判定逻辑是：
+- `contentHeight ≤ expandedMin (96)` → 清空 inline height（让 CSS 接管）
+- 反之 → 设 inline height = scrollHeight
+
+`98 > 96` 落入 else 分支，inline height 被锁成 98px。即便后续 CSS min-height 已经回到 40，inline height 优先级更高，textarea 死死卡在 98px。
+
+**修复（iter15）**：value 为空时直接清 inline height 提前 return，不进入 scrollHeight 测量分支。空内容的高度 100% 由 CSS min-height 决定，不再受字体环境干扰。
+
+```ts
+// src/view.ts: autoResizeInput
+if (el.value.length === 0) {
+  el.style.height = "";
+  // ... 恢复 transition
+  return;
+}
+// 非空才走原有的 scrollHeight 测量分支
+```
+
+### 🐛 修复：多行 memo 中间连续空行导致内容被截断
+
+用户输入：
+```
+这是一个测试1
+[多个空行]
+这是一个测试2
+```
+
+发送后再打开，只剩"这是一个测试1"，下面全部丢失。
+
+排查发现写入端没问题——`renderMemo` 把 memo 正文每行缩进 2 空格、空行保留为空字符串，markdown 文件结构完全正确。
+
+bug 在 **parser 读回时**。`parseFile` 处理"缩进续行 + 空行"的逻辑只往后 peek **一行**：
+
+```ts
+// 老代码（有 bug）
+if (next.trim() === "") {
+  const peek = lines[i + 1];
+  if (peek?.startsWith("  ")) { ... continue; }
+  break;  // 其余情况一律结束
+}
+```
+
+用户连续敲了多个空行 → peek(i+1) 还是空行（不以"  "开头）→ 判定 memo 结束，break！后续即便有缩进的"这是一个测试2"也被当作"文件其他内容"忽略掉。
+
+**修复（iter16）**：改为跳过任意多个连续空行，看再之后第一行是否仍是本 memo 的缩进续行（且没撞到下一条 memo / 日期头 / 年份头）：
+
+```ts
+if (next.trim() === "") {
+  let j = i + 1;
+  while (j < lines.length && lines[j].trim() === "") j++;
+  // 边界检测略
+  if (lines[j]?.startsWith("  ")) {
+    for (let k = i; k < j; k++) bodyLines.push("");
+    i = j;
+    continue;
+  }
+  break;
+}
+```
+
+值得欣慰的是：**md 文件本身没被破坏**，只是 parser 没读完整。修复后用户原来"看似丢失"的 memo 重新加载就完整恢复了，零数据损失。
+
+### ✨ 右侧顶部标题 emoji 补全
+
+用户反馈：右侧顶部的当前筛选状态横幅，部分 preset 自带 emoji（📌 置顶 / ⭐ 收藏 / 🕰️ 往年的今天 / 🎲 随机 5 条），其他 preset 却光秃秃的（今天 / 本周 / 待办 / 无标签 / 有图片 / 有链接），视觉风格不统一。
+
+补齐：
+
+| 项 | 改后 |
+|---|---|
+| 今天 | ☀️ 今天 |
+| 本周 | 🗓️ 本周 |
+| 待办 | ✅ 待办 |
+| 无标签 | 🏷️ 无标签 |
+| 有图片 | 🖼️ 有图片 |
+| 有链接 | 🔗 有链接 |
+
+设计取舍：emoji 只在 `view.ts:describeFilter()` 拼标题时手动加，**不写进 i18n 文案**。原因：
+- 侧栏继续维持 lucide 线条图标 + 纯文字的极简风（侧栏导航需要密集列表里的视觉冷静）
+- 右侧顶部的"当前筛选状态"才是醒目焦点位，emoji 在这里点睛最合适
+- i18n key 不被污染，未来其他场景引用 `sidebar.today` 等 key 时不会突然多出一个 emoji 跑去其他地方
+
+`today` 选 ☀️ 而不是 📅，是为了避开下面 `this.filter.date` 已经用了 📅 的情况（用户同时按某天筛选时不会出现「📅 今天 · 📅 2026-05-09」这种重复）。
+
+### 开发复盘
+
+- v2.0.17 上线后又发现的三个问题，刚好分布在三条不同代码路径上：渲染（autoResizeInput）/ 解析（parseFile）/ 视觉（describeFilter），互不耦合，所以可以在同一版本里安全合并修复
+- 第一个 bug 让我反思了 v2.0.17 的"调换 blur/autoResize 顺序"修复——那个修复**对一部分用户管用**（CSS min-height 主导的场景），但对 scrollHeight 本身就 ≥ 96 的字体环境无效。真正的兜底应该是"空内容直接早 return"，不依赖任何 CSS 状态——这次才是真的修干净了
+- parser 那个 peek 一行的逻辑写于很早期版本，只 cover 了"行尾留个空行 + 接续缩进"的常见情况；用户连敲多空行的真实使用模式才是边界 case，需要扫描穿透。提醒：peek 类逻辑都要问一句"如果 peek 拿到的也是同样的特殊符号怎么办？"
+
+---
+
 ## v2.0.17（2026-05-08 深夜 · 接着 v2.0.16）
 
 ### ⌨️ 默认回到 Ctrl+Enter 发送 + 真相提示
