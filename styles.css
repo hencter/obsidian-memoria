@@ -1,4 +1,4 @@
-/* ================================================================
+﻿/* ================================================================
  * Memoria 样式（完全基于 Obsidian CSS 变量，自动跟随主题）
  * ================================================================ */
 
@@ -3576,4 +3576,396 @@
   filter: brightness(1.15);
   z-index: 2;
   position: relative;
+}
+
+
+/* ========================================================== *
+ * v2.1.0: Buddy 宠物视图样式
+ * ASCII art adapted from Claude Code Buddy (Anthropic, 2026 Aprilfool)
+ * ========================================================== */
+
+/* v2.1.0-iter3 改造：
+ *   - 顶栏紧凑化：稀有度移左、陪伴天数移右，合并为一行
+ *   - 背景去突兀：使用透明背景 + 极淡内边框，让宠物卡片"溶进"侧栏
+ *   - 整体瘦身：减小 padding / 缩小 sprite 字号 / 压缩属性条间距
+ */
+
+/* ==========================================================
+ * Memoria Buddy（v2.1.0-iter14 克制版重排）
+ *
+ * 设计哲学：
+ *   - 卡片本身无边框无背景 —— 完全融入侧栏
+ *   - 主角区（ASCII + 名字 + Motto）和数据区（5 维 + 气泡）之间
+ *     用空白拉开层次，而不是用边框
+ *   - 5 维属性：去框去背景 → 行式排列 + 字符进度条
+ *   - 气泡：去框去背景 → 居中斜体 + 引号，像"碎碎念"
+ *   - 整体节奏：有大间距让 ASCII 真正成为视觉焦点
+ * ========================================================== */
+
+/* 卡片容器：完全去除装饰，纯垂直布局 */
+.memoria-buddy {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  /* v2.1.0-iter17: 顶栏改为绝对定位后，顶部 padding 缩小，让 ASCII 自然贴近顶部
+   * v2.1.0-iter18: 进一步减留白 —— top padding 直接 0，让 ASCII 紧贴卡片顶 */
+  padding: 0 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  font-family: var(--font-monospace);
+  position: relative;
+}
+
+/* ========== 顶栏：稀有度（左）+ 陪伴天数（右） ==========
+ * v2.1.0-iter16: 平时不显示，hover 卡片才浮出。
+ *   理由："普通"提醒价值感低 + "成年"看久了腻 + 陪伴天数没必要时刻看到，
+ *   把这些信息变成"想知道时才看"，平时纯净到只剩 ASCII + 名字 + 数据 + 心情。
+ * v2.1.0-iter17: 用 position: absolute 让它脱离布局流，平时不占空间。
+ *   之前用 visibility: hidden 顶栏还占着 ~14px 高度，导致宠物上方有大留白。
+ *   现在改为绝对定位浮在卡片顶部，hover 才显现。
+ */
+.memoria-buddy-topbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 10px;
+  /* 绝对定位，脱离布局流（不占高度）
+   * v2.1.0-iter18: top 改为负值，让 hover 时顶栏浮在卡片上方边界外，
+   *   不挤压 ASCII（卡片 padding-top 已经为 0）*/
+  position: absolute;
+  top: -14px;
+  left: 8px;
+  right: 8px;
+  /* 默认隐藏 */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s;
+  pointer-events: none;
+}
+.memoria-buddy:hover .memoria-buddy-topbar {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* v2.1.0-iter18 移动端兼容：触屏没有 hover 事件，否则用户永远看不到稀有度 / 阶段 / 陪伴天数。
+ * 检测 (hover: none) → 触屏 / 平板 / 手机：
+ *   - 顶栏改回"占位 + 常显"，不 hover 也能看到
+ *   - 物种 hover 出 motto 在触屏上也不工作，但 motto 不是关键信息可接受丢失
+ *   理由：手机屏幕大、用完即走，"普通/成年/天数"心智开支问题不像 PC 久看那么明显
+ */
+@media (hover: none) {
+  .memoria-buddy {
+    padding-top: 4px; /* 给顶栏让回一点空间 */
+  }
+  .memoria-buddy-topbar {
+    position: static;        /* 回到正常布局流 */
+    top: auto;
+    left: auto;
+    right: auto;
+    margin-bottom: 4px;
+    opacity: 1;              /* 直接显示 */
+    visibility: visible;
+    pointer-events: auto;
+  }
+  .memoria-buddy-sprite-wrap {
+    margin-top: 0;           /* 已经被顶栏挤过，不再额外加 */
+  }
+}
+.memoria-buddy-rarity-wrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.memoria-buddy-rarity {
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+.memoria-buddy-shiny-tag {
+  color: #e8b64a;
+  animation: memoria-buddy-shiny-blink 1.6s ease-in-out infinite;
+}
+@keyframes memoria-buddy-shiny-blink {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
+/* 陪伴天数 —— 弱化（更小字号 + 更淡颜色），它是"情感数据"不是"信息" */
+.memoria-buddy-days {
+  font-size: 9.5px;
+  color: var(--text-faint);
+  letter-spacing: 0.3px;
+}
+
+/* ========== 主角区：ASCII 精灵 ========== */
+.memoria-buddy-sprite-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  /* 主角区上下大留白，让 ASCII 真正成为视觉中心
+   * v2.1.0-iter17: 顶栏改为绝对定位后，上 margin 从 12px 缩到 6px
+   * v2.1.0-iter18: 上 margin 直接归零，ASCII 紧贴卡片顶（顶栏 hover 时浮在边界外）*/
+  margin: 0 0 8px;
+}
+.memoria-buddy-sprite {
+  font-family: var(--font-monospace);
+  font-size: 12px;
+  line-height: 1.18;
+  white-space: pre;
+  text-align: center;
+  color: var(--text-normal);
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+
+/* 稀有度对应的 sprite 微妙色调（除 legendary 外都很克制）*/
+.memoria-buddy-common    .memoria-buddy-sprite { color: var(--text-normal); }
+.memoria-buddy-uncommon  .memoria-buddy-sprite { color: var(--text-normal); }
+.memoria-buddy-rare      .memoria-buddy-sprite { color: var(--text-normal); }
+.memoria-buddy-epic      .memoria-buddy-sprite { color: var(--text-normal); }
+.memoria-buddy-legendary .memoria-buddy-sprite {
+  color: var(--text-normal);
+  text-shadow: 0 0 6px rgba(232, 182, 74, 0.25);
+  animation: memoria-buddy-legendary-pulse 3s ease-in-out infinite;
+}
+@keyframes memoria-buddy-legendary-pulse {
+  0%, 100% { text-shadow: 0 0 6px rgba(232, 182, 74, 0.20); }
+  50%      { text-shadow: 0 0 10px rgba(232, 182, 74, 0.40); }
+}
+
+/* ========== 名字行：名字 · 物种 ========== */
+/* v2.1.0-iter15: 移除阶段标签（移到顶栏）+ 移除 Motto 独立行
+ *   名字行下方需要补一点间距，让它和 stats 之间有视觉断隔（之前 Motto 担任了"分隔"角色）*/
+.memoria-buddy-name-row {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-normal);
+  margin-top: 4px;
+  margin-bottom: 14px;
+  letter-spacing: 0.3px;
+}
+.memoria-buddy-name {
+  font-weight: 600;
+  color: var(--text-normal);
+}
+.memoria-buddy-name.is-clickable {
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0 2px;
+  transition: background 0.15s;
+}
+.memoria-buddy-name.is-clickable:hover {
+  background: var(--background-modifier-hover);
+}
+.memoria-buddy-species {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.memoria-buddy-stage {
+  font-size: 10.5px;
+  letter-spacing: 0.3px;
+}
+.memoria-buddy-stage-tag-baby  { color: var(--text-faint); }
+.memoria-buddy-stage-tag-teen  { color: #82c590; }
+.memoria-buddy-stage-tag-adult { color: #d4a85a; }
+
+/* v2.1.0-iter15: Motto 改为收进物种 hover title，不再独占一行 */
+
+/* ========== 数据区：5 维属性（去框去背景）========== */
+.memoria-buddy-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  /* 关键：完全无边框无背景，溶进侧栏 */
+  background: transparent;
+  border: none;
+  padding: 0 4px;
+}
+.memoria-buddy-stat-row {
+  display: grid;
+  grid-template-columns: 38px 1fr 22px;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-family: var(--font-monospace);
+}
+.memoria-buddy-stat-label {
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+/* 进度条：极薄 + 无背景框 + 进度条本身降饱和度 */
+.memoria-buddy-stat-bar {
+  display: block;
+  height: 4px;
+  background: var(--background-modifier-border);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+  /* 关键：去掉之前的内嵌边框 */
+}
+.memoria-buddy-stat-fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--text-muted);
+  opacity: 0.6;
+}
+.memoria-buddy-common    .memoria-buddy-stat-fill { background: #a8a4a0; }
+.memoria-buddy-uncommon  .memoria-buddy-stat-fill { background: #82c590; }
+.memoria-buddy-rare      .memoria-buddy-stat-fill { background: #82b4d8; }
+.memoria-buddy-epic      .memoria-buddy-stat-fill { background: #c598e0; }
+.memoria-buddy-legendary .memoria-buddy-stat-fill {
+  background: #e8b64a;
+  opacity: 0.8;
+}
+.memoria-buddy-stat-val {
+  color: var(--text-faint);
+  font-size: 9.5px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ========== 气泡：去框去背景，纯文字碎碎念 ========== */
+.memoria-buddy-bubble {
+  margin: 14px 4px 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-faint);
+  line-height: 1.4;
+  /* v2.1.0-iter15: 用中文「」包裹，更贴合中文语境 */
+  /* v2.1.0-iter16: 去掉斜体（font-style: italic）—— 中文字符斜体渲染普遍很糊，
+   *   清晰度比"语气感"更重要。气泡的轻量感靠灰色 + 小字号 + 引号已经足够。*/
+}
+.memoria-buddy-bubble::before {
+  content: "\300C";
+  margin-right: 1px;
+  opacity: 0.7;
+}
+.memoria-buddy-bubble::after {
+  content: "\300D";
+  margin-left: 1px;
+  opacity: 0.7;
+}
+.memoria-buddy-bubble-text {
+  display: inline;
+}
+
+/* ========== 阶段气场（少年 / 成年）========== */
+.memoria-buddy-aura {
+  font-family: var(--font-monospace);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--text-faint);
+  user-select: none;
+  pointer-events: none;
+  text-align: center;
+}
+.memoria-buddy-aura-top {
+  animation: memoria-buddy-aura-float 3s ease-in-out infinite;
+}
+@keyframes memoria-buddy-aura-float {
+  0%, 100% { transform: translateY(0); opacity: 0.55; }
+  50%      { transform: translateY(-1px); opacity: 0.85; }
+}
+.memoria-buddy-aura-bottom {
+  animation: memoria-buddy-aura-pulse 3s ease-in-out infinite;
+  letter-spacing: 1px;
+}
+@keyframes memoria-buddy-aura-pulse {
+  0%, 100% { opacity: 0.3; transform: scaleX(0.92); }
+  50%      { opacity: 0.7; transform: scaleX(1); }
+}
+.memoria-buddy-stage-teen .memoria-buddy-aura {
+  color: #82c590;
+}
+.memoria-buddy-stage-adult .memoria-buddy-aura {
+  color: #d4a85a;
+}
+.memoria-buddy-stage-adult .memoria-buddy-sprite {
+  text-shadow: 0 0 4px rgba(212, 168, 90, 0.18);
+}
+
+/* ========== 孵化破壳动画（仅刚孵化时播一次）========== */
+.memoria-buddy.is-just-hatched {
+  animation: memoria-buddy-hatch-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes memoria-buddy-hatch-in {
+  0%   { opacity: 0; transform: translateY(20px) scale(0.85); }
+  60%  { opacity: 1; transform: translateY(-3px) scale(1.03); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ========================================================== *
+ * 蛋（未孵化状态）—— 保留原有装饰，未变
+ * ========================================================== */
+.memoria-buddy-egg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  gap: 6px;
+}
+.memoria-buddy-egg .memoria-buddy-sprite {
+  font-size: 14px;
+  color: var(--text-muted);
+  animation: memoria-buddy-egg-wobble 2.4s ease-in-out infinite;
+}
+.memoria-buddy-egg.is-ready .memoria-buddy-sprite {
+  color: #e8b64a;
+  animation: memoria-buddy-egg-wobble 0.9s ease-in-out infinite;
+}
+@keyframes memoria-buddy-egg-wobble {
+  0%, 100% { transform: rotate(-2deg); }
+  50%      { transform: rotate(2deg); }
+}
+.memoria-buddy-egg-title {
+  font-size: 12px;
+  color: var(--text-normal);
+  margin-top: 4px;
+}
+.memoria-buddy-egg-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.memoria-buddy-egg-input {
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 12px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  color: var(--text-normal);
+  transition: border 0.15s;
+}
+.memoria-buddy-egg-input:focus {
+  border-color: var(--interactive-accent);
+  outline: none;
+}
+.memoria-buddy-egg-input.is-error {
+  border-color: var(--text-error);
+  animation: memoria-buddy-shake 0.4s ease;
+}
+@keyframes memoria-buddy-shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-4px); }
+  75%      { transform: translateX(4px); }
+}
+.memoria-buddy-egg-btn {
+  padding: 5px 14px;
+  font-size: 12px;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.memoria-buddy-egg-btn:hover {
+  opacity: 0.9;
+}
+.memoria-buddy-egg-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
