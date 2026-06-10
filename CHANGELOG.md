@@ -6,6 +6,181 @@
 
 ---
 
+## v2.2.0（2026-06-10 晚 · 移动端 FAB 浮动输入入口）
+
+紧接 v2.1.3 的修复发版，加一个一直在心里盘算但没动手的功能。
+
+### 背景
+
+用户反馈：手机上输入框常驻底部占了**大块屏幕空间**（约 1/3），笔记列表只剩 2/3 可视，体验憋屈。希望对齐 flomo / Memos 移动端：默认隐藏输入框，**右下角浮动一个 ➕ 按钮**，点击才弹出输入框。
+
+### 实现思路
+
+#### 决策
+
+1. **桌面端不做** —— 桌面屏幕大、键盘鼠标流畅，常驻输入框是更高效的选择
+2. **默认开启 FAB** 但提供设置项允许切回常驻模式（兼容老用户习惯）
+3. **写到一半离开不丢内容** —— 有内容时收起按钮触发后只 blur，不收卡片，避免误触
+4. **位置右下角** —— 符合移动端右手大拇指习惯
+5. **从底部滑上来** —— 跟桌面输入卡片底部位置语义一致
+
+#### 实现
+
+整体走 **CSS 主导 + 极少 JS 切 class** 的策略，零运行时 if/else：
+
+| 层 | 控制项 |
+|---|---|
+| 媒体查询 `@media (hover: none) and (pointer: coarse)` | 桌面端永远 `display: none`，零运行时成本 |
+| root class `.memoria-input-fab-mode` | settings.mobileInputStyle === "fab" 时挂 |
+| root class `.is-fab-expanded` | FAB 点击后挂、发送/关闭按钮触发后摘 |
+
+三层布尔组合的真值表：
+
+| 设备 | mobileInputStyle | is-fab-expanded | FAB 显示 | 输入卡片显示 |
+|---|---|---|---|---|
+| 桌面 | * | * | ❌ | ✅ |
+| 触屏 | always-visible | * | ❌ | ✅ |
+| 触屏 | fab | false | ✅ | ❌ |
+| 触屏 | fab | true | ❌（淡出） | ✅（滑上来） |
+
+#### 关键细节
+
+- **FAB 颜色跟主题走**：`background: var(--interactive-accent)`，紫色主题就是紫色 ➕，白色主题就是浅色 ➕，不需要单独配色
+- **iOS home indicator 避让**：`bottom: calc(20px + env(safe-area-inset-bottom, 0px))`
+- **按下反馈**：`:active` 时缩到 0.92 + 阴影变小，模拟物理按压
+- **动画用 max-height + opacity**：避开 display 切换不能 transition 的限制；展开 0.25s、收起 0.22s
+- **草稿保护**：写到一半点空白处只 blur 键盘，卡片保持展开（用户能看到自己写到哪了）；只有发送成功 / 主动点 ✕ / 退出编辑模式无草稿时才真正收回 FAB
+- **编辑模式自动展开**：移动端 FAB 模式下，点某条卡片"编辑"时输入框是隐藏的，`enterEditMode` 自动触发展开 → focus
+
+### 文件变更
+
+- `src/types.ts` — 加 `mobileInputStyle: "fab" | "always-visible"`，默认 `"fab"`
+- `src/i18n.ts` — 中英文文案（设置项 + 按钮 aria-label）
+- `src/settings.ts` — dropdown 选择器 + 切换后立即 notifyChange 让 view 重渲染
+- `src/view.ts` —
+  - 加 `fabEl` 字段
+  - `buildLayout` 末尾调 `buildFab()` 创建按钮 + close-btn + 初始 syncFabMode
+  - 新方法 `syncFabMode / expandFabInput / collapseFabInput`
+  - `renderAll` 头部调 syncFabMode（响应设置变更）
+  - `submitMemo` 成功后在 fab 模式下自动收起
+  - `enterEditMode` 在 fab 模式下自动展开
+  - `exitEditMode` 在 fab 模式下无草稿时收回
+- `styles.css` — 加 ~140 行 FAB 样式（包在 `@media (hover: none) and (pointer: coarse)` 内）
+
+### 已知不实现的
+
+- ❌ 长按 FAB 显示快捷菜单（截图 / 录音 / 拍照）—— Memoria 不做大而全
+- ❌ 打字过程中拖动 FAB 改位置 —— 增加复杂度，价值不高
+- ❌ 桌面端 FAB —— 桌面键鼠流畅，常驻更高效
+
+---
+
+## v2.1.3（2026-06-10 晚 · 折叠/全文/平板适配的 4 处 UI 修复）
+
+时隔近一个月再发版。用户在使用过程中累积了 4 个细小但碍眼的 UI 问题，今晚一并修复。
+
+### 🐛 1. 任务列表折叠时复选框方框被切
+
+用户截图反馈"折叠的笔记里 task list 每一行的复选框 □ 都缺了左边一竖，看起来像 `]`"。
+
+排查发现这其实是两个**独立**的子问题叠在一起：
+
+#### 1a. 整列复选框左侧方框被 overflow 裁掉（主问题）
+
+**根因**（v2.0.5 的延伸 bug）：
+- Obsidian 默认主题 / 多数主题给 task-list 复选框加**负 margin-left**，让方框稍微"伸出 li 左边界"作为视觉装饰
+- `.is-collapsed` 加了 `overflow: hidden`（截断超长内容必须），把负 margin 区域里的方框左竖**切掉了**
+- 表现：折叠卡片里**每一行**的复选框都缺左竖
+
+v2.0.5 已经在 `.is-compact` 模式下修过同一个 bug（给 ul 加 `padding-left` 把复选框挤回 li 内部）。这次把同样的策略复用到 `.is-collapsed`：
+
+```css
+.memoria-card-body.is-collapsed ul.contains-task-list {
+  padding-left: 1.8em;
+}
+.memoria-card-body.is-collapsed ul.contains-task-list li.task-list-item input[type="checkbox"] {
+  margin-left: 0;
+}
+```
+
+#### 1b. 最后一行被截到一半，残影从 fade 渐隐处露出
+
+**根因**：
+- 折叠时 `max-height = lineH × N`，按"普通段落行高"算
+- 任务列表 `<li>` 实际高度 ≈ lineH + 4-6px（含 padding/checkbox）
+- 截断卡到某行**中间**，最后那行的下半部从 max-height 露出
+- 旧 fade 渐变（透明 0% → 不透明 90%）让残影**渐隐却没遮住**
+
+**修复**：
+- fade 高度 40 → 64（够盖住一整个 `<li>` 高度）
+- 渐变 stop 改为 `transparent 0% → transparent 30% → bg 60% → bg 100%`
+- 上半 30% 透明保留"最后一行的清晰可读"，下半 60%+ 纯背景色完全遮住"半行残影"
+
+### 🐛 2. 长文不带标签时「全文 v」按钮位置错乱
+
+**现象**：
+- 带标签的折叠卡片：「全文 v」贴卡片右下 ✅
+- **不带标签**的折叠卡片：「全文 v」漂在卡片中部偏左 ❌
+
+**根因**（v1.3.6 的 placeBtn 优先级缺陷）：
+- 旧策略 host 优先级：`tagRow` → **`imgGrid`** → `body`
+- 不带标签时 host 落到 imgGrid，而 `.memoria-img-grid` 自身有 `max-width: 380px`（单图 `260px`）
+- 按钮即便 `grid-column: 1 / -1` + `justify-self: end`，也只能贴 imgGrid 的右边
+- imgGrid 右边距离卡片右边还有 ~600px → 按钮看起来浮在卡片"中间偏左"
+
+**修复**：
+- 把 imgGrid 从 host 候选剔除：`tagRow ? tagRow : card`
+- 新增 CSS 规则 `.memoria-card > .memoria-collapse-toggle` 用 block 级 `margin-left: auto` 贴卡片右边缘
+- 删除已不需要的 `.memoria-img-grid > .memoria-collapse-toggle` 和 `.memoria-card-body > .memoria-collapse-toggle` 规则
+- 现在不论有没有图、有没有标签、有没有折叠，按钮永远视觉对齐到卡片右下角
+
+### 📱 3. 平板（iPad）输入框第一个中文字被裁
+
+**现象**：用户用 iPad 默认主题、关掉除 Memoria 外所有插件，输入框第一行第一个字"测""此"等中文字左侧被裁掉 1-2px，看起来像"则"。
+
+**根因**：
+- v1.4.14 / v1.4.16 已经修过这个 iOS WebView 字渲染 quirk —— 给 textarea 加 `padding-left: 4px / padding-top: 2px / -webkit-appearance: none` 安全区
+- 但**那段修复包在 `@media (max-width: 680px)` 里**，只对手机生效
+- iPad 横屏 1180px / 纵屏 820px 都超过 680，走桌面通用规则（`padding: 0 !important`）→ 同样的字渲染问题再次出现
+
+**修复**：
+- 新增一段 `@media (hover: none) and (pointer: coarse)`（W3C 规范定义的"主输入是触屏"判定）
+- 复制最关键的字渲染 padding 安全区，覆盖所有触屏设备（iPhone + iPad + Android）
+- 桌面端无论窗口多窄都是 `hover: hover, pointer: fine`，完全不受影响
+- 不复制 `min-height: 56px / font-size: 15px` —— 那是手机紧凑布局，iPad 大屏不需要
+
+### 📱 4. 平板纵屏发布时间编辑框遮住发送按钮
+
+**现象**：iPad 纵屏编辑卡片时，发布时间的 datetime-local 输入框把发送按钮挤出可视区。横屏正常。
+
+**根因**：
+- v2.0.8 的 datetime 换行布局（datetime 在第一行 / 取消+发送在第二行）阈值是 `@media (max-width: 680px)`
+- iPad 纵屏 CSS 视口约 810-834px，**超过 680** → 走桌面单行布局
+- iOS 的 `datetime-local` 控件在窄屏上特别宽，"datetime + 取消 + 发送"三件套一行塞不下 → 发送被挤出
+
+**修复**：阈值 `680px → 900px`：
+- iPad 纵屏（~820px）走换行布局，发送按钮稳定可见 ✅
+- iPad 横屏（~1180px）继续走桌面单行布局 ✅
+- 桌面继续单行 ✅
+- 手机继续换行（值更小，仍在范围内）✅
+
+### 不修复的相关问题
+
+用户提到的两个平板小问题已全部覆盖。与上次 v2.0.9~2.0.11 的 iOS form control 折腾经验一致 —— **这次没有去硬刚 datetime-local 自身的尺寸/对齐，仍然让它按 iOS 默认行为贴右换行**，只是把生效范围从手机扩到平板纵屏。务实路线，零 quirk，跨平台一致。
+
+### 文件变更
+
+- `manifest.json` `package.json` `versions.json` — 版本号 2.1.2 → 2.1.3
+- `src/view.ts` — 改 `placeBtn` 优先级，imgGrid 不再作为 host
+- `styles.css` —
+  - 折叠 fade 遮罩高度+渐变 stop 调整（修复 1）
+  - 删旧的 `.memoria-card-body > .memoria-collapse-toggle` / `.memoria-img-grid > .memoria-collapse-toggle` 规则
+  - 新增 `.memoria-card > .memoria-collapse-toggle` 规则（修复 2）
+  - datetime 换行 media 阈值 680 → 900（修复 4）
+  - 新增 `@media (hover: none) and (pointer: coarse)` 触屏 textarea 字渲染保护（修复 3）
+
+---
+
 ## v2.1.2（2026-05-13 凌晨 · 修复从 Obsidian 主编辑器粘贴时双链/标签丢失）
 
 用户反馈：从 Obsidian 主编辑器复制 `[[笔记名]]` 或 `#标签` 粘到 Memoria，结果**双链变成了 `[笔记名](url)` 普通 markdown 链接、标签变成超链接文本**。

@@ -37,6 +37,7 @@
   v1.4.12 修订：规避 PowerShell 解析陷阱
     - 不要用 $Args 做参数名（是内置自动变量，导致 "数组索引表达式丢失或无效"）
     - 双引号字符串里尽量不要同时出现 [] + $()，避免解析器把 [] 当索引表达式
+  v2.2.0 修订：路径迁移到 E:\Obsidian 插件开发\，目录名从 memoria-v1.1.1-source 改为 memoria-source
 #>
 
 [CmdletBinding()]
@@ -49,8 +50,9 @@ param(
 $ErrorActionPreference = 'Stop'
 
 # ============ 配置 ============
-$ReleaseDir = 'C:\Users\zololiu\Desktop\memoria-release'
-$SourceDir  = 'C:\Users\zololiu\Desktop\memoria-v1.1.1-source'
+# v2.2.0: 路径从 C:\Users\zololiu\Desktop\ 迁移到 E:\Obsidian 插件开发\
+$ReleaseDir = 'E:\Obsidian 插件开发\memoria-release'
+$SourceDir  = 'E:\Obsidian 插件开发\memoria-source'
 $VaultDir   = 'D:\NAS\Notes\Obsidian\.obsidian\plugins\memoria'
 $GitHubOwner = 'i-iooi-i'
 $GitHubRepo  = 'obsidian-memoria'

@@ -1397,8 +1397,16 @@
  *   真机表现仍不稳定。**改回 v2.0.8 的简单方案**：datetime 在 submit-wrap 内
  *   按其自然宽度贴右排列（iOS 默认行为），上下两行布局清晰，按钮永远可见。
  *   视觉上不与左侧工具列左对齐，但稳定、跨平台一致、零 quirk。
+ *
+ * v2.1.3: 阈值 680px → 900px。
+ *   原 680px 阈值只覆盖手机（iPhone 横屏 ~926px 也不在内、iPad 纵屏 ~820px
+ *   完全不在内）。用户反馈 iPad 纵屏发布时间编辑框会挡住发送按钮 —— 因为
+ *   iPad 纵屏 CSS 视口约 810-834px，超过 680 走的是桌面单行布局，而 iOS
+ *   的 datetime-local 控件在窄屏上特别宽，单行塞不下"datetime + 取消 + 发送"
+ *   三件套。提到 900px 后，iPad 纵屏走换行布局，发送按钮稳定可见；iPad 横屏
+ *   （~1180px）和桌面继续走单行布局。
  */
-@media (max-width: 680px) {
+@media (max-width: 900px) {
   .memoria-submit-wrap {
     flex-wrap: wrap;
     justify-content: flex-end;
@@ -3018,30 +3026,70 @@
 }
 
 /* v1.3.0 → v1.3.3: 长笔记折叠
-   让 card 成为定位上下文，方便折叠按钮绝对定位到右下角 */
+   让 card 成为定位上下文，方便折叠按钮绝对定位到右下角
+   v2.1.3: 加 overflow: hidden 配合 .is-collapsed 的 negative-margin 技巧
+     （详见下面 .is-collapsed 的注释）。卡片内本身没有依赖溢出显示的子元素
+     （绝对定位元素都在卡片内部 padding 区，不会被裁），所以这个改动是安全的。 */
 .memoria-card {
   position: relative;
+  overflow: hidden;
 }
 .memoria-card-body.is-collapsed {
   max-height: var(--memoria-collapse-max, 240px);
   overflow: hidden;
   position: relative;
   transition: max-height 180ms ease;
+  /* v2.1.3-iter3: 扩展 overflow 的左裁切边界，给 task-list 复选框的负 margin 让出空间
+   *
+   * 问题：折叠态下 task-list 复选框 □ 左侧方框被裁掉一竖。
+   *
+   * 根因：Obsidian 默认主题给 checkbox 加 `margin-left: 负值`（约 -12px）
+   *   让方框稍微伸出 li 左边作为视觉装饰。但 .is-collapsed 的 overflow: hidden
+   *   会沿 body 的内容盒子边界裁切，那一截负 margin 区域恰好落在边界外被切掉。
+   *
+   * iter1 / iter2 失败方案（"挪动内容位置躲避裁切"）：
+   *   - 给 ul 加 padding-left: 1.8em → 方框右移太多，跟未折叠态对不齐
+   *   - 给 li 加 padding-left: 6px → 还是有部分遮挡 + 仍偏移未对齐
+   *   都会导致折叠/未折叠两态视觉位置不一致。
+   *
+   * iter3 真正的解法（"扩裁切边界、不动内容"）：
+   *   negative margin + 等量 padding，让 body 的可视位置不变，
+   *   但 overflow: hidden 的裁切边界整体外扩，原来被裁的负 margin 区域
+   *   现在落在 padding 内 → 完整显示。
+   *
+   *   - 取 18px：刚好等于 .memoria-card 的 padding 18px，body 扩张到的
+   *     新边界正好贴卡片内边框，不溢出卡片背景区，配合 .memoria-card
+   *     新加的 overflow: hidden 防止任何意外溢出。
+   *   - 这样 task-list 的 ul / li / checkbox 完全不需要任何额外样式，
+   *     折叠/未折叠两态共享相同样式 → 视觉位置 100% 一致。
+   */
+  margin-left: -18px;
+  margin-right: -18px;
+  padding-left: 18px;
+  padding-right: 18px;
 }
 /* 底部渐变淡出遮罩，从 body 背景色过渡到透明
    注意：卡片实际背景是 --background-primary-alt，fallback --background-secondary
-   遮罩底色必须与它一致，否则会有色差 */
+   遮罩底色必须与它一致，否则会有色差
+   v2.1.3: 高度 40 → 64。
+     单纯把渐变高度拉大一倍即可同时解决"半行残影"问题：
+     - 旧 40px：fade 从透明到 90% 不透明，区间太短，最后被切的那半行 li
+       从 max-height 露出后只能渐隐却没被纯色完全遮住，看起来像"方框缺一块"
+     - 新 64px：透明 → 完全不透明的过渡区间扩到 64px，足够把任何被切的
+       半行 li（含 padding 的 task-list 高度 ~28-32px）完整盖住
+     stop 保持 0% → 100% 的连续渐变（**保留视觉柔和**，不做硬切，
+     避免用户反馈的"渐变生硬像被截断"）。 */
 .memoria-card-body.is-collapsed::after {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 40px;
+  height: 64px;
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    var(--background-primary-alt, var(--background-secondary)) 90%
+    var(--background-primary-alt, var(--background-secondary)) 100%
   );
   pointer-events: none;
 }
@@ -3050,7 +3098,7 @@
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    color-mix(in srgb, var(--interactive-accent) 4%, var(--background-primary-alt, var(--background-secondary))) 90%
+    color-mix(in srgb, var(--interactive-accent) 4%, var(--background-primary-alt, var(--background-secondary))) 100%
   );
 }
 
@@ -3102,29 +3150,23 @@
   height: 12px;
 }
 
-/* 当按钮直接挂在 body 里（没有 tagRow / imgGrid 时），
-   block 容器下 flex 按钮的 margin-left:auto 不生效，
-   需改用 block 级的右对齐 */
-.memoria-card-body > .memoria-collapse-toggle {
+/* v2.1.3: 没有标签时按钮直接挂在 card 末尾（imgGrid 之后），跟卡片同宽。
+   旧方案（v1.3.6）按 tagRow → imgGrid → body 的优先级 fallback，但：
+   - 挂 imgGrid 时：imgGrid 自身 max-width: 380px（单图 260px），按钮即便
+     grid-column: 1/-1 + justify-self: end 也只能贴 imgGrid 的右边，
+     视觉上离卡片右边缘有 ~600px 距离 → 看起来浮在卡片中部偏左。
+   - 挂 body 时：折叠状态下按钮 absolute 到 body 右下角，但 body 上方可能
+     还有一坨图片/标签没渲染完，按钮位置会跳。
+   新方案：tagRow 在就挂 tagRow（保持 v1.3.6 行为），不在就直接挂 card，
+     用下面的 block 右对齐规则统一处理。card 是普通 block 容器，宽度等于
+     卡片可视宽度，margin-left: auto 让 fit-content 的按钮整块右对齐 —— 永远
+     视觉对齐到卡片右下角，不论有没有图、有没有折叠。 */
+.memoria-card > .memoria-collapse-toggle {
   display: block;
   width: fit-content;
   margin-top: 4px;
-  margin-left: auto;  /* 块级右对齐 */
+  margin-left: auto;  /* 块级右对齐到卡片右边缘 */
   margin-right: 0;
-}
-.memoria-card-body.is-collapsed > .memoria-collapse-toggle {
-  position: absolute;
-  right: 2px;
-  bottom: 8px;
-  margin: 0;
-}
-
-/* 按钮在图片网格内时：imgGrid 是 grid 布局，按钮应独占一行右对齐。
-   通过 grid-column: 1 / -1 让按钮横跨所有列，再 justify-self: end 右对齐 */
-.memoria-img-grid > .memoria-collapse-toggle {
-  grid-column: 1 / -1;
-  justify-self: end;
-  margin-top: 2px;
 }
 
 
@@ -3820,6 +3862,45 @@
   background: #e8b64a;
   opacity: 0.8;
 }
+
+/* ================================================================
+ * v2.1.3: 触屏设备 textarea 字渲染保护（含 iPad 横屏）
+ *
+ * 问题（用户 2026-06-10 平板反馈）：
+ *   iPad（横屏 ~1180px / 纵屏 ~820px）使用默认主题，输入框第一行第一个
+ *   中文字（如"测""此"）左侧笔画被左边界裁掉 1-2px，看起来像"则"。
+ *
+ * 根因：
+ *   v1.4.14 / v1.4.16 已经修过这个 iOS WebView 字渲染 quirk —— 给
+ *   .memoria-input 加 padding-left: 4px / padding-top: 2px / -webkit-appearance
+ *   做安全区。但**那段修复包在 @media (max-width: 680px) 里**，只对手机生效。
+ *   iPad 横屏 1180px / 纵屏 820px 都超过 680，走的是桌面通用规则
+ *   （padding: 0 !important），iOS WebView 上同样的字渲染问题再次出现。
+ *
+ * 这次修复：
+ *   把"字渲染必须的 padding 安全区"用 (hover: none) and (pointer: coarse)
+ *   作为媒体查询条件 —— 这是 W3C 规范定义的"主输入是触屏"的判定，
+ *   覆盖所有 iPhone + Android phone + iPad + Android tablet，但不影响
+ *   桌面（即使在小窗口下也是 hover: hover, pointer: fine）。
+ *
+ * 注意：
+ *   只复制最关键的几条（字渲染 padding + appearance），不复制 min-height/
+ *   font-size，那些是手机紧凑布局，不是字渲染必须的（iPad 大屏不需要紧凑）。
+ *   原 @media (max-width: 680px) 内的同名规则保持不变，二者特异性相同，
+ *   后定义的（这一段）覆盖前面，对手机也无害（值完全一致）。
+ * ================================================================ */
+@media (hover: none) and (pointer: coarse) {
+  .memoria-input {
+    /* 防中文首字符笔画被 iOS WebView 裁切（v1.4.14 / v1.4.16 思路）*/
+    text-indent: 0 !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+}
 .memoria-buddy-stat-val {
   color: var(--text-faint);
   font-size: 9.5px;
@@ -3969,3 +4050,160 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ================================================================
+ * v2.2.0: 移动端 FAB（Floating Action Button）浮动输入入口
+ *
+ * 设计目标：手机/平板上让笔记列表占满屏幕，输入框默认隐藏，右下角浮动一个
+ *   ➕ 按钮，点击才展开输入框。桌面端永远不启用，输入框继续常驻顶部。
+ *
+ * 控制层级：
+ *   1. 媒体查询：`(hover: none) and (pointer: coarse), (max-width: 680px)` ——
+ *      逗号 = OR：触屏设备 或 窄屏窗口 任一满足即生效。
+ *      - 真机手机/平板（hover: none + pointer: coarse）→ 真实场景生效
+ *      - 桌面把 OB 窗口拉到手机宽度（≤ 680px）→ 也生效，让用户能在桌面预览
+ *        移动端体验，跟 OB 移动端样式（@media max-width: 680px）保持一致触发口径
+ *      - 桌面正常宽度 → 永远不进入这段，零影响
+ *   2. .memoria-input-fab-mode 类挂在 root（.memoria-root）——
+ *      由 settings.mobileInputStyle === "fab" 触发；用户切回 "always-visible"
+ *      时该 class 被移除，FAB 隐藏、输入框恢复常驻
+ *   3. .is-fab-expanded 类同样挂在 root —— 表示"FAB 触发后输入框已展开"
+ *
+ * 三层组合的结果：
+ *   - 桌面正常宽度：FAB display: none，输入框 v2.1.x 行为不变
+ *   - 触屏 / 窄屏 + always-visible：FAB display: none，输入框 v2.1.x 行为不变
+ *   - 触屏 / 窄屏 + fab + 未展开：FAB 显示，输入框隐藏
+ *   - 触屏 / 窄屏 + fab + 已展开：FAB 隐藏，输入框滑上来
+ *
+ * 默认状态（桌面 + 任何 mobileInputStyle）—— FAB 完全隐藏：
+ * ================================================================ */
+.memoria-fab {
+  display: none;
+}
+.memoria-input-close {
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse), (max-width: 680px) {
+  /* ============= FAB 按钮（仅 fab 模式 + 未展开时显示） ============= */
+  .memoria-root.memoria-input-fab-mode .memoria-fab {
+    display: flex;
+    position: fixed;
+    right: 20px;
+    /* env(safe-area-inset-bottom) 让 FAB 自动避开 iOS home indicator
+       fallback 0 处理无 safe-area 的设备 */
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    width: 52px;
+    height: 52px;
+    align-items: center;
+    justify-content: center;
+    /* 跟主题色走 —— 用户要求的"➕ 颜色跟界面一致" */
+    background: var(--interactive-accent) !important;
+    color: var(--text-on-accent) !important;
+    border: none !important;
+    border-radius: 50%;
+    /* 浮起阴影 + 微弱主题色光晕，让 FAB 视觉"漂浮在内容上方"
+       两层阴影：第一层柔和大范围底影，第二层高对比微小贴边阴影增加立体感 */
+    box-shadow:
+      0 4px 14px -2px color-mix(in srgb, var(--interactive-accent) 35%, rgba(0, 0, 0, 0.25)),
+      0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    cursor: pointer;
+    z-index: 100;
+    /* 出现/消失动画 */
+    transform: scale(1);
+    opacity: 1;
+    transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.18s ease;
+    /* 防 iOS Safari 给原生 button 套灰边 */
+    -webkit-appearance: none;
+    appearance: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .memoria-root.memoria-input-fab-mode .memoria-fab:active {
+    /* 按下反馈：略缩 + 阴影变小，模拟"按下去"的物理感 */
+    transform: scale(0.92);
+    box-shadow:
+      0 2px 6px -1px color-mix(in srgb, var(--interactive-accent) 35%, rgba(0, 0, 0, 0.3)),
+      0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  }
+  .memoria-root.memoria-input-fab-mode .memoria-fab .svg-icon {
+    width: 24px;
+    height: 24px;
+    /* 用 stroke 表达图标线条粗细 */
+    stroke-width: 2.4;
+  }
+
+  /* ============= 输入卡片（仅 fab 模式 + 未展开时隐藏） =============
+     已展开 (is-fab-expanded) 时让输入卡片正常显示。
+     用 max-height + opacity 做滑入滑出动画（避开 display 切换不能 transition 的限制）。
+
+     注意：必须用 max-height 不能直接 height，因为输入框高度会随内容动态变化；
+     给 max-height 一个足够大的上限（500px），实际高度由内容决定。 */
+  .memoria-root.memoria-input-fab-mode:not(.is-fab-expanded) .memoria-input-card {
+    /* 完全隐藏 + 不可交互（不占空间，不抢焦点）*/
+    max-height: 0 !important;
+    min-height: 0 !important;
+    opacity: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    /* 防止子元素的 box-shadow 溢出 */
+    box-shadow: none !important;
+    transition: max-height 0.22s ease, opacity 0.18s ease,
+      padding 0.22s ease, margin 0.22s ease;
+  }
+  .memoria-root.memoria-input-fab-mode.is-fab-expanded .memoria-input-card {
+    /* 展开：保持 v2.1.x 移动端原本的 margin/padding（在 @media max-width:680px 段定义）
+       这里只控制可见性 + 动画 */
+    max-height: 500px;
+    opacity: 1;
+    transition: max-height 0.25s ease, opacity 0.2s ease 0.05s;
+  }
+
+  /* 已展开时 FAB 自身淡出 + 缩小消失（不是直接 display: none，留过渡感）*/
+  .memoria-root.memoria-input-fab-mode.is-fab-expanded .memoria-fab {
+    transform: scale(0.4);
+    opacity: 0;
+    /* 动画结束后用 visibility:hidden 彻底退出 hit-test，避免被键盘遮住时还
+       能被误触触发。pointer-events 已经够用，但 visibility 双保险。 */
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  /* ============= 输入卡片右上角的关闭按钮 ============= */
+  .memoria-root.memoria-input-fab-mode.is-fab-expanded .memoria-input-close {
+    display: inline-flex;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 50%;
+    color: var(--text-muted);
+    cursor: pointer;
+    box-shadow: none !important;
+    z-index: 1;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+  .memoria-root.memoria-input-fab-mode.is-fab-expanded .memoria-input-close:active {
+    background: var(--background-modifier-hover) !important;
+    color: var(--text-normal);
+  }
+  .memoria-root.memoria-input-fab-mode.is-fab-expanded .memoria-input-close .svg-icon {
+    width: 16px;
+    height: 16px;
+  }
+  /* input-card 必须 position: relative 才能让 close 按钮 absolute 定位生效。
+     v1.1.19 在 @media (max-width: 680px) 里给 input-card 设了 order: 10，但没
+     position，这里补一下（仅 fab 模式 + 已展开时）。 */
+  .memoria-root.memoria-input-fab-mode.is-fab-expanded .memoria-input-card {
+    position: relative;
+  }
+}
+
