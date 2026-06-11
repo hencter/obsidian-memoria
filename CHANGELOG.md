@@ -6,6 +6,26 @@
 
 ---
 
+## v2.3.2（2026-06-11 晚 · 修复移动端长内容输入框被键盘遮挡）
+
+**现象**（移动端 FAB 模式）：按 ➕ 展开输入短内容时，输入框准确贴在键盘上方；但内容越输越长、或关闭后再次展开长草稿时，输入框底部（含发送按钮、正在输入的最后一行）会被键盘窗口遮住。
+
+**根因**：v2.0.10 的"聚焦后滚动到键盘上方"逻辑只在 textarea `focus` 那一下触发一次。之后内容变长时 `autoResizeInput` 把 textarea 撑高，但**没有重新滚动**，底部就被键盘顶出视口；关闭再开时长草稿一上来就很高，单次 focus 滚动也压不住。
+
+**修复**：抽出统一的 `scrollInputIntoView()` 方法，在三处复用——
+- `focus`（延迟 300ms 等键盘动画结束）
+- `input`（每次输入后延迟 0 立即跟手）
+- `expandFabInput`（展开长草稿时光标移末尾后滚动）
+
+滚动目标从"整个 card（block:end）"改为 **`.memoria-submit-wrap`（底部按钮行）+ block:nearest** —— card 过高时 block:end 会把顶部推到键盘后，而只要保证底部按钮行可见，光标所在的最后一行自然也在其上方可见；block:nearest 让已可见时不滚动、不抖动。
+
+### 文件变更
+
+- `manifest.json` `package.json` `versions.json` — 2.3.1 → 2.3.2
+- `src/view.ts` — 新增 `scrollInputIntoView()`，focus / input / expandFabInput 三处复用
+
+---
+
 ## v2.3.1（2026-06-11 晚 · 修复有内容时点 ✕ 收不起输入框）
 
 **现象**：移动端 FAB 模式下，输入框有内容时点右上角 ✕「收起输入框」没反应；无内容时正常。
