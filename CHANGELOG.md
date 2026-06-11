@@ -6,6 +6,46 @@
 
 ---
 
+## v2.3.0（2026-06-11 · 移动端 FAB / 关闭按钮微调 + 侧栏年份开关）
+
+紧接 v2.2.0 的 FAB 功能，根据移动端真机反馈做 3 处调整。
+
+### 📱 1. FAB ➕ 按钮上移，避开 Obsidian 移动端底部工具栏
+
+**现象**：手机端 FAB 默认位置太低，被 Obsidian 自身的移动端底部工具栏（navbar）遮住大半。
+
+**修复**：`bottom` 从 `calc(20px + safe-area)` 抬高到 `calc(72px + safe-area)`，让 FAB 完整浮在工具栏上方。`env(safe-area-inset-bottom)` 继续叠加避开 iOS home indicator。
+
+### 📱 2. 收起输入框的 ❌ 按钮放大
+
+**现象**：输入卡片右上角的「收起输入框」✕ 按钮太小（针尖大小），几乎看不见。
+
+**修复**：
+- 容器 `28×28 → 36×36`，图标 `16×16 → 20×20`，`stroke-width: 2.4` 加粗
+- 加常驻淡背景圆底（`--background-modifier-hover`），图标颜色从 `text-muted → text-normal` 提高对比
+- `:active` 按下时变主题色高亮，反馈更明确
+
+### 🗂️ 3. 侧栏「年份」列表增加显示/隐藏开关
+
+**背景**：笔记跨度长（8 年甚至更多）的用户，右侧年份列表会很长造成视觉干扰。希望像「标签树」一样能在设置里关掉。
+
+**实现**：
+- `types.ts` 加 `showSidebarYears: boolean`，默认 `true`（沿用老行为，不影响现有用户）
+- `settings.ts` 加 toggle 设置项（跟 `showSidebarTags` 同一套机制，切换后只 `notifyChange` 重渲染，不重读文件）
+- `view.ts` 年份渲染包一层 `if (this.settings.showSidebarYears)`
+- 中英文 i18n 文案
+
+### 文件变更
+
+- `manifest.json` `package.json` `versions.json` — 版本号 2.2.0 → 2.3.0
+- `src/types.ts` — 加 `showSidebarYears` 字段 + 默认值
+- `src/i18n.ts` — 年份开关中英文文案
+- `src/settings.ts` — 年份显示 toggle
+- `src/view.ts` — 年份渲染加开关判断
+- `styles.css` — FAB `bottom` 上移 + close 按钮放大
+
+---
+
 ## v2.2.0（2026-06-10 晚 · 移动端 FAB 浮动输入入口）
 
 紧接 v2.1.3 的修复发版，加一个一直在心里盘算但没动手的功能。

@@ -4090,9 +4090,11 @@
     display: flex;
     position: fixed;
     right: 20px;
-    /* env(safe-area-inset-bottom) 让 FAB 自动避开 iOS home indicator
-       fallback 0 处理无 safe-area 的设备 */
-    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    /* v2.3.0: bottom 从 20px → 72px。
+       原 20px 时 FAB 被 Obsidian 移动端底部原生工具栏（mobile navbar，
+       高约 48px）遮住大半。抬高到 72px 让 FAB 完整浮在工具栏上方。
+       env(safe-area-inset-bottom) 继续叠加，自动避开 iOS home indicator。 */
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
     width: 52px;
     height: 52px;
     align-items: center;
@@ -4171,33 +4173,39 @@
     visibility: hidden;
   }
 
-  /* ============= 输入卡片右上角的关闭按钮 ============= */
+  /* ============= 输入卡片右上角的关闭按钮 =============
+     v2.3.0: 原 28×28 容器 + 16×16 图标，在移动端实际显示"针尖大小几乎看不见"。
+       放大为 36×36 容器 + 20×20 图标，并加一个常驻的淡背景圆底 + 更深的图标
+       颜色，让它在输入卡片右上角清晰可辨、好点。 */
   .memoria-root.memoria-input-fab-mode.is-fab-expanded .memoria-input-close {
     display: inline-flex;
     position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 28px;
-    height: 28px;
+    top: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
     align-items: center;
     justify-content: center;
-    background: transparent !important;
+    /* 常驻淡背景圆底，让按钮"看得见" */
+    background: var(--background-modifier-hover) !important;
     border: none !important;
     border-radius: 50%;
-    color: var(--text-muted);
+    /* 用 text-normal 而非 text-muted，对比更高更显眼 */
+    color: var(--text-normal);
     cursor: pointer;
     box-shadow: none !important;
-    z-index: 1;
+    z-index: 2;
     -webkit-tap-highlight-color: transparent;
     transition: background 0.12s ease, color 0.12s ease;
   }
   .memoria-root.memoria-input-fab-mode.is-fab-expanded .memoria-input-close:active {
-    background: var(--background-modifier-hover) !important;
-    color: var(--text-normal);
+    background: var(--background-modifier-active-hover, var(--interactive-accent)) !important;
+    color: var(--text-on-accent);
   }
   .memoria-root.memoria-input-fab-mode.is-fab-expanded .memoria-input-close .svg-icon {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
+    stroke-width: 2.4;
   }
   /* input-card 必须 position: relative 才能让 close 按钮 absolute 定位生效。
      v1.1.19 在 @media (max-width: 680px) 里给 input-card 设了 order: 10，但没
