@@ -6,6 +6,38 @@
 
 ---
 
+## v2.3.3（2026-06-11 晚 · FAB 输入框改 fixed 贴底，根治键盘遮挡/抖动/✕ 消失）
+
+v2.3.2 用 JS `scrollIntoView` 试图把长内容输入框滚回键盘上方，真机测试暴露了三个新问题：
+1. 重开长草稿时仍被键盘遮挡（滚动时机在 iOS 上不可控）
+2. 输入时界面**抖动频闪**（input 每次打字都 smooth 滚动，动画互相打断）
+3. 右上角 **✕ 关闭按钮消失**（滚动把卡片顶部连同 ✕ 推出视口）
+
+印证了"iOS 键盘 + scrollIntoView 是无底洞"。这次**换根本性方案**，彻底抛弃 scrollIntoView。
+
+### 方案：FAB 展开态输入卡片改为 `position: fixed` 贴屏幕底部
+
+- 卡片固定吸附在屏幕底部（`bottom: 0`）。iOS 键盘弹起时 Obsidian WebView 会收缩 layout viewport，`bottom: 0` 自动落在键盘正上方 —— 跟「常驻底部输入框」一直好用同理，不依赖任何 JS 滚动
+- 卡片总高用 `max-height: 60vh` 限制；textarea 内部 `max-height: 38vh + overflow-y: auto`，**长内容在 textarea 内部滚动**，不再撑高整张卡片
+- 卡片用 flex 纵向布局，工具栏/发送按钮行 `flex-shrink: 0` 固定在卡片底部，永远跟着卡片可见
+- ✕ 按钮 absolute 定位在固定卡片内，**永远可见、不被滚走**
+
+### 三个问题如何被根治
+
+| 问题 | 旧方案（scrollIntoView） | 新方案（fixed 贴底） |
+|---|---|---|
+| 长内容被键盘遮 | 滚动时机不可控，仍被遮 | 卡片 fixed 贴底，永远在键盘上方 ✅ |
+| 输入时抖动频闪 | input 每次 smooth 滚动互相打断 | 完全无页面滚动，零抖动 ✅ |
+| ✕ 按钮消失 | 滚动把卡片顶部推出视口 | ✕ 在固定卡片内，永远可见 ✅ |
+
+### 文件变更
+
+- `manifest.json` `package.json` `versions.json` — 2.3.2 → 2.3.3
+- `src/view.ts` — 删除 `scrollInputIntoView()` 及 focus/input/expand 三处调用；expandFabInput 改为 textarea 内部 `scrollTop` 滚到底（光标可见）
+- `styles.css` — FAB 展开态输入卡片 `position: fixed` 贴底 + textarea `max-height: 38vh` 内部滚动 + 工具栏 `flex-shrink: 0`
+
+---
+
 ## v2.3.2（2026-06-11 晚 · 修复移动端长内容输入框被键盘遮挡）
 
 **现象**（移动端 FAB 模式）：按 ➕ 展开输入短内容时，输入框准确贴在键盘上方；但内容越输越长、或关闭后再次展开长草稿时，输入框底部（含发送按钮、正在输入的最后一行）会被键盘窗口遮住。

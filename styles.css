@@ -4156,11 +4156,31 @@
       padding 0.22s ease, margin 0.22s ease;
   }
   .memoria-root.memoria-input-fab-mode.is-fab-expanded .memoria-input-card {
-    /* 展开：保持 v2.1.x 移动端原本的 margin/padding（在 @media max-width:680px 段定义）
-       这里只控制可见性 + 动画 */
-    max-height: 500px;
+    /* v2.3.3: 展开态改为 position: fixed 贴屏幕底部固定。
+     *
+     * 为什么要 fixed（解决 v2.3.2 真机暴露的 3 个问题）：
+     *   旧方案输入卡片在 flex 流里（order: 10），长内容时 textarea 撑高 →
+     *   整张卡片变高、顶部一直延伸到屏幕上方，底部（输入区/发送按钮）被键盘
+     *   遮住。v2.3.2 想靠 JS scrollIntoView 把它滚回来，但 iOS 上：
+     *     ① 重开长草稿时滚动时机不可控 → 仍被遮
+     *     ② input 每次打字 smooth 滚动 → 界面抖动频闪
+     *     ③ 滚动把卡片顶部连同 ✕ 按钮推出视口 → ✕ 消失
+     *
+     * fixed 贴底从根上解决：卡片固定吸附在屏幕底部（iOS 键盘弹起时 Obsidian
+     *   WebView 收缩 layout viewport，bottom: 0 自动落在键盘正上方，跟常驻底部
+     *   输入框一直好用同理），不再随内容增高而移动。内容超高由 textarea 内部
+     *   滚动消化（见下方 .memoria-input 的 max-height + overflow-y）。
+     *   ✕ 按钮 absolute 在固定卡片内，永远可见、不被滚走。 */
+    position: fixed !important;
+    left: 8px;
+    right: 8px;
+    bottom: 0;
+    margin: 0 0 8px !important;
+    max-height: 60vh;
     opacity: 1;
-    transition: max-height 0.25s ease, opacity 0.2s ease 0.05s;
+    z-index: 50;
+    background: var(--background-primary);
+    transition: opacity 0.2s ease;
   }
 
   /* 已展开时 FAB 自身淡出 + 缩小消失（不是直接 display: none，留过渡感）*/
@@ -4207,11 +4227,26 @@
     height: 20px;
     stroke-width: 2.4;
   }
-  /* input-card 必须 position: relative 才能让 close 按钮 absolute 定位生效。
-     v1.1.19 在 @media (max-width: 680px) 里给 input-card 设了 order: 10，但没
-     position，这里补一下（仅 fab 模式 + 已展开时）。 */
+  /* v2.3.3: fixed 贴底的输入卡片用 flex 纵向布局，让 textarea 可伸缩、
+     工具栏行固定在底部。配合 textarea 的 max-height 内部滚动，整张卡片
+     高度被 max-height: 60vh 限制住，长内容在 textarea 内部滚动而不撑高卡片。 */
   .memoria-root.memoria-input-fab-mode.is-fab-expanded .memoria-input-card {
-    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  /* textarea 内部滚动：超过 38vh 就在 textarea 内滚，不再撑高整张卡片。
+     这样卡片总高（textarea + 工具栏 + padding）始终 ≤ max-height: 60vh，
+     底部工具栏/发送按钮永远贴在卡片底、跟着卡片 fixed 在键盘上方可见。 */
+  .memoria-root.memoria-input-fab-mode.is-fab-expanded .memoria-input {
+    max-height: 38vh !important;
+    overflow-y: auto !important;
+    /* 给 ✕ 按钮（右上角 36px）让出空间，避免首行末尾文字被盖 */
+    padding-right: 44px !important;
+  }
+  /* 工具栏行不收缩，始终完整显示在卡片底部 */
+  .memoria-root.memoria-input-fab-mode.is-fab-expanded .memoria-input-toolbar {
+    flex-shrink: 0;
   }
 }
+
 
