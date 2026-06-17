@@ -1,0 +1,734 @@
+// ================= 统计报告（作为 Obsidian 标签页打开） =================
+
+import { ItemView, WorkspaceLeaf, setIcon } from "obsidian";
+import { Memo, RESERVED_TAGS, VIEW_TYPE_MEMORIA_STATS } from "./types";
+import type { MemoStore } from "./store";
+import { t, getCurrentLocale } from "./i18n";
+
+export class StatsView extends ItemView {
+  private memos: Memo[] = [];
+  private unsubscribe: (() => void) | null = null;
+
+  constructor(leaf: WorkspaceLeaf, private store: MemoStore) {
+    super(leaf);
+  }
+
+  getViewType(): string {
+    return VIEW_TYPE_MEMORIA_STATS;
+  }
+
+  getDisplayText(): string {
+    return t("stats.title");
+  }
+
+  getIcon(): string {
+    return "bar-chart-3";
+  }
+
+  async onOpen(): Promise<void> {
+    this.contentEl.addClass("memoria-stats-view");
+    this.memos = this.store.getAll();
+    this.render();
+    this.unsubscribe = this.store.onChange(() => {
+      this.memos = this.store.getAll();
+      this.render();
+    });
+  }
+
+  async onClose(): Promise<void> {
+    if (this.unsubscribe) this.unsubscribe();
+  }
+
+  private render(): void {
+    const contentEl = this.contentEl;
+    contentEl.empty();
+
+    const titleEl = contentEl.createDiv({ cls: "mstat-pagetitle" });
+    titleEl.createSpan({ cls: "mstat-pagetitle-icon", text: "📊" });
+    titleEl.createSpan({
+      cls: "mstat-pagetitle-text",
+      text: t("stats.title"),
+    });
+
+    if (this.memos.length === 0) {
+      contentEl.createEl("p", {
+        text: t("stats.empty"),
+        cls: "mstat-empty-page",
+      });
+      return;
+    }
+
+    const body = contentEl.createDiv({ cls: "memoria-stats-body" });
+    this.renderOverview(body);
+    this.renderYearHeatmap(body);
+    this.renderTopTags(body);
+    this.renderHourlyChart(body);
+    this.renderHighlights(body);
+    this.renderTagCloud(body);
+  }
+
+  // -------- 总览 --------
+  private renderOverview(parent: HTMLElement): void {
+    const section = parent.createDiv({ cls: "mstat-section" });
+    const row = section.createDiv({ cls: "mstat-overview" });
+
+    const totalWords = this.memos.reduce(
+      (s, m) => s + m.content.replace(/\s/g, "").length,
+      0
+    );
+    const days = new Set(this.memos.map((m) => m.date)).size;
+    const firstDay = [...this.memos].sort(
+      (a, b) => a.datetime.getTime() - b.datetime.getTime()
+    )[0];
+    const spanDays =
+      Math.floor(
+        (Date.now() - firstDay.datetime.getTime()) / (1000 * 60 * 60 * 24)
+      ) + 1;
+
+    this.renderBigNum(row, this.memos.length, t("stats.label.memos"));
+    this.renderBigNum(row, totalWords, t("stats.label.words"));
+    this.renderBigNum(row, days, t("stats.label.activeDays"));
+    this.renderBigNum(row, spanDays, t("stats.label.spanDays"));
+  }
+
+  private renderBigNum(parent: HTMLElement, num: number, label: string): void {
+    const item = parent.createDiv({ cls: "mstat-bignum" });
+    item.createDiv({
+      cls: "mstat-bignum-num",
+      text: num.toLocaleString(),
+    });
+    item.createDiv({ cls: "mstat-bignum-label", text: label });
+  }
+
+  // -------- 365 天大热力图 --------
+  private renderYearHeatmap(parent: HTMLElement): void {
+    const section = parent.createDiv({ cls: "mstat-section" });
+
+    const titleRow = section.createDiv({ cls: "mstat-yh-title-row" });
+    titleRow.createDiv({ cls: "mstat-title", text: t("stats.section.yearHeatmap") });
+
+    // 年份切换器：[←] 2026 年 [→]
+    const yearNav = titleRow.createDiv({ cls: "mstat-yh-year-nav" });
+    const prevBtn = yearNav.createEl("button", {
+      cls: "mstat-yh-year-arrow",
+      attr: { "aria-label": t("stats.nav.prevYear"), title: t("stats.nav.prevYear") },
+    });
+    setIcon(prevBtn, "chevron-left");
+    const yearBtn = yearNav.createEl("button", {
+      cls: "mstat-yh-year-btn",
+    });
+    const nextBtn = yearNav.createEl("button", {
+      cls: "mstat-yh-year-arrow",
+      attr: { "aria-label": t("stats.nav.nextYear"), title: t("stats.nav.nextYear") },
+    });
+    setIcon(nextBtn, "chevron-right");
+
+    let displayYear = new Date().getFullYear();
+    yearBtn.setText(t("stats.yearBtn", { year: displayYear }));
+
+    // v1.1.17: 年度热力图自身宽 ~800px，窄屏必然溢出。
+    //   把 wrap + monthLabels 塞到同一个滚动容器里，保持两者列对齐，独立横滚。
+    const yhScroll = section.createDiv({ cls: "mstat-yh-scroll" });
+    const wrap = yhScroll.createDiv({ cls: "mstat-yh-wrap" });
+    const monthLabels = yhScroll.createDiv({ cls: "mstat-yh-monthlabels" });
+
+    // 月度柱状图占位（跟随年份一起渲染）
+    const monthlyTitle = parent.createDiv({
+      cls: "mstat-section mstat-monthly-title",
+    });
+    const monthlyTitleRow = monthlyTitle.createDiv({ cls: "mstat-title-row" });
+    monthlyTitleRow.createDiv({ cls: "mstat-title", text: t("stats.section.monthly") });
+    const monthlySubtitle = monthlyTitleRow.createDiv({
+      cls: "mstat-subtitle",
+    });
+    const monthlyChartWrap = parent.createDiv({ cls: "mstat-monthly-wrap" });
+
+    const render = (year: number): void => {
+      wrap.empty();
+      monthLabels.empty();
+      yearBtn.setText(t("stats.yearBtn", { year }));
+
+      const dayMap = new Map<string, number>();
+      for (const m of this.memos) {
+        if (!m.date.startsWith(`${year}-`)) continue;
+        dayMap.set(m.date, (dayMap.get(m.date) ?? 0) + 1);
+      }
+
+      const start = new Date(year, 0, 1);
+      const today = new Date();
+      // v1.4.10: 即便是今年，也渲染完整 12 个月的热力图骨架（到 12/31）。
+      //   之前 end = today，当年只画到今天为止，页面右下会有大片空白，
+      //   看起来像是"渲染了一半没渲染完"的 bug 感。现在未来的日子照样出格子，
+      //   只是 count===0 走 level-0（最浅灰底），和 GitHub / 2023 年老数据视觉一致。
+      const end = new Date(year, 11, 31);
+      // 用 "今天" 来判断"未来"，用于 title 提示语更准确
+      const todayDateOnly = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      );
+
+      const startDow = start.getDay();
+      const gridStart = new Date(start);
+      gridStart.setDate(start.getDate() - startDow);
+
+      const days = Math.floor(
+        (end.getTime() - gridStart.getTime()) / (1000 * 60 * 60 * 24) + 0.5
+      ) + 1;
+      const weeks = Math.ceil(days / 7);
+
+      // 月份标签：记录每个月第一次出现的周列索引（仅当年的月份）
+      const monthFirstWeek: { month: number; week: number }[] = [];
+      let lastMonth = -1;
+      for (let w = 0; w < weeks; w++) {
+        const day = new Date(gridStart);
+        day.setDate(gridStart.getDate() + w * 7);
+        // 跳过上一年和下一年的格子
+        if (day.getFullYear() !== year) continue;
+        const mo = day.getMonth();
+        if (mo !== lastMonth) {
+          monthFirstWeek.push({ month: mo, week: w });
+          lastMonth = mo;
+        }
+      }
+
+      // 渲染：用绝对定位把月份标签放到对应列位置
+      const cellW = 13;
+      const gap = 3;
+      monthLabels.style.width = `${weeks * (cellW + gap)}px`;
+      for (let i = 0; i < monthFirstWeek.length; i++) {
+        const m = monthFirstWeek[i];
+        const next = monthFirstWeek[i + 1];
+        const spanWeeks = next ? next.week - m.week : weeks - m.week;
+        // 至少跨 2 周才显示标签，避免拥挤
+        if (spanWeeks < 2) continue;
+        const label = monthLabels.createDiv({
+          cls: "mstat-yh-mlabel",
+          text: t("stats.monthShort", { m: m.month + 1 }),
+        });
+        label.style.left = `${m.week * (cellW + gap)}px`;
+      }
+
+      // 网格
+      for (let w = 0; w < weeks; w++) {
+        const col = wrap.createDiv({ cls: "mstat-yh-col" });
+        for (let d = 0; d < 7; d++) {
+          const day = new Date(gridStart);
+          day.setDate(gridStart.getDate() + w * 7 + d);
+          const key = fmtDate(day);
+          const inRange = day >= start && day <= end;
+          const count = dayMap.get(key) ?? 0;
+          // v1.4.10: 未来的日子（当年今天之后）视觉上同 level-0，
+          //   但 hover title 改成"未来"而不是"0 条"，避免误导
+          const isFuture = inRange && day > todayDateOnly;
+          const level = !inRange
+            ? -1
+            : count === 0
+            ? 0
+            : count < 2
+            ? 1
+            : count < 4
+            ? 2
+            : count < 7
+            ? 3
+            : 4;
+          const cell = col.createDiv({
+            cls: `mstat-yh-cell level-${level}`,
+            attr: {
+              title: !inRange
+                ? ""
+                : isFuture
+                ? t("stats.heatmap.future", { date: key })
+                : t("stats.heatmap.dayCount", { date: key, n: count }),
+            },
+          });
+          if (level === -1) cell.style.visibility = "hidden";
+        }
+      }
+
+      // 月度柱状图：显示该年 1-12 月
+      this.renderMonthlyForYear(monthlyChartWrap, year);
+      const yearTotal = this.memos.filter((m) =>
+        m.date.startsWith(`${year}-`)
+      ).length;
+      monthlySubtitle.setText(t("stats.monthlyYearSum", { year, n: yearTotal }));
+    };
+
+    const switchYear = (delta: number): void => {
+      const years = [
+        ...new Set(this.memos.map((m) => parseInt(m.date.substring(0, 4)))),
+      ].sort();
+      if (years.length === 0) return;
+      const idx = years.indexOf(displayYear);
+      const safeIdx = idx < 0 ? 0 : idx;
+      const nextIdx = (safeIdx + delta + years.length) % years.length;
+      displayYear = years[nextIdx];
+      render(displayYear);
+    };
+
+    prevBtn.addEventListener("click", () => switchYear(-1));
+    nextBtn.addEventListener("click", () => switchYear(1));
+    yearBtn.addEventListener("click", () => switchYear(1));
+
+    render(displayYear);
+
+    // 图例
+    const legend = section.createDiv({ cls: "mstat-yh-legend" });
+    legend.createSpan({ text: t("stats.legend.less") });
+    for (let i = 0; i <= 4; i++) {
+      legend.createDiv({ cls: `mstat-yh-cell level-${i}` });
+    }
+    legend.createSpan({ text: t("stats.legend.more") });
+  }
+
+  // -------- 年度月份柱状图（由 renderYearHeatmap 的 year 驱动） --------
+  private renderMonthlyForYear(parent: HTMLElement, year: number): void {
+    parent.empty();
+
+    const months: { key: string; label: string; count: number }[] = [];
+    for (let i = 0; i < 12; i++) {
+      months.push({
+        key: `${year}-${pad(i + 1)}`,
+        label: t("stats.monthShort", { m: i + 1 }),
+        count: 0,
+      });
+    }
+    for (const m of this.memos) {
+      if (!m.date.startsWith(`${year}-`)) continue;
+      const mi = parseInt(m.date.substring(5, 7), 10) - 1;
+      months[mi].count++;
+    }
+    const max = Math.max(1, ...months.map((m) => m.count));
+
+    // v1.1.17: 月度 12 列柱图 ~354px 在窄屏也会溢出，给同款滚动容器
+    const scrollWrap = parent.createDiv({ cls: "mstat-bar-chart-scroll" });
+    const chart = scrollWrap.createDiv({ cls: "mstat-bar-chart" });
+    for (const mo of months) {
+      const col = chart.createDiv({ cls: "mstat-bar-col" });
+      const barWrap = col.createDiv({ cls: "mstat-bar-wrap" });
+      const bar = barWrap.createDiv({
+        cls:
+          "mstat-bar" +
+          (mo.count === max && mo.count > 0 ? " is-max" : "") +
+          (mo.count === 0 ? " is-empty" : ""),
+      });
+      // v1.1.5: 0 条月份也保留 2px 高的"空柱"，保持视觉连续性
+      bar.style.height =
+        mo.count === 0 ? "2px" : `${(mo.count / max) * 100}%`;
+      bar.setAttr("title", t("stats.monthlyBarRange", { key: mo.key, n: mo.count }));
+      col.createDiv({
+        cls: "mstat-bar-num" + (mo.count === 0 ? " is-dim" : ""),
+        // v1.1.5: 0 也显示数字（弱化颜色），保持"每列都有数字"的节奏感
+        text: String(mo.count),
+      });
+      col.createDiv({ cls: "mstat-bar-label", text: mo.label });
+    }
+  }
+
+  // -------- 标签云 --------
+  private renderTagCloud(parent: HTMLElement): void {
+    const counter = new Map<string, number>();
+    for (const m of this.memos)
+      for (const t of m.tags) {
+        if (RESERVED_TAGS.has(t)) continue;
+        counter.set(t, (counter.get(t) ?? 0) + 1);
+      }
+    if (counter.size === 0) return;
+
+    const section = parent.createDiv({ cls: "mstat-section" });
+    section.createDiv({ cls: "mstat-title", text: t("stats.section.tagCloud") });
+
+    const list = [...counter.entries()].sort((a, b) => b[1] - a[1]);
+    const max = list[0][1];
+    const min = list[list.length - 1][1];
+    const cloud = section.createDiv({ cls: "mstat-cloud" });
+
+    // 5 档字号
+    for (const [tag, c] of list) {
+      const ratio = max === min ? 1 : (c - min) / (max - min);
+      // 12 ~ 22 px
+      const fontSize = 12 + ratio * 10;
+      // 不透明度 0.55 ~ 1
+      const opacity = 0.55 + ratio * 0.45;
+      const span = cloud.createSpan({
+        cls: "mstat-cloud-tag",
+        text: `#${tag}`,
+        attr: { title: t("list.totalCount", { n: c }) },
+      });
+      span.style.fontSize = `${fontSize}px`;
+      span.style.opacity = String(opacity);
+    }
+  }
+
+  // -------- 热门标签 --------
+  private renderTopTags(parent: HTMLElement): void {
+    const section = parent.createDiv({ cls: "mstat-section" });
+    section.createDiv({ cls: "mstat-title", text: t("stats.section.topTags") });
+
+    const counter = new Map<string, number>();
+    for (const m of this.memos)
+      for (const t of m.tags) {
+        if (RESERVED_TAGS.has(t)) continue;
+        counter.set(t, (counter.get(t) ?? 0) + 1);
+      }
+    const top = [...counter.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+    if (top.length === 0) {
+      section.createDiv({
+        cls: "mstat-empty",
+        text: t("stats.noTag"),
+      });
+      return;
+    }
+
+    const max = top[0][1];
+    const list = section.createDiv({ cls: "mstat-hbar-list" });
+    top.forEach(([tag, count], i) => {
+      const row = list.createDiv({ cls: "mstat-hbar-row" });
+      const rank = row.createDiv({
+        cls: "mstat-hbar-rank rank-" + Math.min(i + 1, 4),
+      });
+      rank.setText(String(i + 1));
+      row.createDiv({ cls: "mstat-hbar-label", text: `#${tag}` });
+      const barWrap = row.createDiv({ cls: "mstat-hbar-wrap" });
+      const bar = barWrap.createDiv({ cls: "mstat-hbar" });
+      bar.style.width = `${(count / max) * 100}%`;
+      row.createDiv({
+        cls: "mstat-hbar-num",
+        text: count.toString(),
+      });
+    });
+  }
+
+  // -------- 小时分布 --------
+  private renderHourlyChart(parent: HTMLElement): void {
+    const section = parent.createDiv({ cls: "mstat-section" });
+    const titleRow = section.createDiv({ cls: "mstat-title-row" });
+    titleRow.createDiv({
+      cls: "mstat-title",
+      text: t("stats.section.hourly"),
+    });
+    titleRow.createDiv({
+      cls: "mstat-subtitle",
+      text: t("stats.hourly.subtitle", { n: this.memos.length }),
+    });
+
+    const buckets = new Array(24).fill(0);
+    for (const m of this.memos) buckets[m.datetime.getHours()]++;
+    const max = Math.max(1, ...buckets);
+
+    // v1.1.17: 手机端 24 列 × ~14px label 需要约 340px，必然超过窄屏可用宽度。
+    //   给柱图套一个独立滚动容器，让它"自己横向滚"而不是推整页滚动。
+    const scrollWrap = section.createDiv({ cls: "mstat-bar-chart-scroll" });
+    const chart = scrollWrap.createDiv({
+      cls: "mstat-bar-chart mstat-bar-chart-hour",
+    });
+    for (let h = 0; h < 24; h++) {
+      const col = chart.createDiv({ cls: "mstat-bar-col" });
+      const barWrap = col.createDiv({ cls: "mstat-bar-wrap" });
+      const bar = barWrap.createDiv({
+        cls:
+          "mstat-bar" +
+          (buckets[h] === max && buckets[h] > 0 ? " is-max" : "") +
+          (buckets[h] === 0 ? " is-empty" : ""),
+      });
+      const heightPct = (buckets[h] / max) * 100;
+      // 让 0 条的小时也有 1px 占位，避免视觉上"突然消失"
+      bar.style.height = buckets[h] === 0 ? "2px" : `${heightPct}%`;
+      bar.setAttr("title", t("stats.hourly.barTip", { hh: pad(h), n: buckets[h] }));
+      col.createDiv({ cls: "mstat-bar-label", text: pad(h) });
+    }
+
+    const peakHour = buckets.indexOf(max);
+    const desc = section.createDiv({ cls: "mstat-desc" });
+    desc.setText(
+      t("stats.hourly.peak", {
+        hh: pad(peakHour),
+        n: max,
+        pct: ((max / this.memos.length) * 100).toFixed(1),
+      })
+    );
+  }
+
+  // -------- 高亮记录 --------
+  // v1.1.19: 引入"文案池"+"每日彩蛋"，让数据报告有温度。
+  //   - 每条 fact 从 2-3 条候选里按日期 seed 挑一条 → 同一天稳定，换一天有新鲜感
+  //   - 顶部加 1 条"今日彩蛋"，根据当前小时段和日期 seed 双重随机
+  private renderHighlights(parent: HTMLElement): void {
+    const section = parent.createDiv({ cls: "mstat-section" });
+    section.createDiv({ cls: "mstat-title", text: t("stats.section.highlights") });
+
+    const list = section.createDiv({ cls: "mstat-fact-list" });
+
+    // v2.0.4: 英文版文案池暂未翻译，先给个友好提示
+    //   理由：highlights 里的"有趣发现"全是中文文学性表达（"话痨日""Memoria 有点想你"等），
+    //   机翻成英文会失去味道；专业翻译成本暂时不打算投入。中文用户占绝对主流。
+    if (getCurrentLocale() === "en-US") {
+      list.createDiv({
+        cls: "mstat-fact",
+        text: t("stats.highlightsENOnly"),
+      });
+      return;
+    }
+
+    // 今日 seed（以 yyyy-mm-dd 为种子，同一天反复打开结果稳定）
+    const today = new Date();
+    const daySeed =
+      today.getFullYear() * 10000 +
+      (today.getMonth() + 1) * 100 +
+      today.getDate();
+    const pickFromPool = (pool: string[], salt: number): string => {
+      const idx = Math.abs((daySeed + salt * 131) >>> 0) % pool.length;
+      return pool[idx];
+    };
+
+    // ===== 今日彩蛋（顶部独立一条）=====
+    const easterEggs: string[] = [];
+    const hour = today.getHours();
+    if (hour >= 0 && hour < 5) {
+      easterEggs.push(
+        "凌晨了还在看数据报告？灵感往往藏在熬夜的第三杯茶里。",
+        "此时此刻你是全世界最清醒的一批人之一，好好记录这份清醒。",
+        "夜深人静，最适合给自己写封小纸条。"
+      );
+    } else if (hour >= 5 && hour < 9) {
+      easterEggs.push(
+        "早起的鸟儿有虫吃，早起的脑子最容易蹦出金句。",
+        "清晨的想法最不带滤镜，现在记下来会很值。"
+      );
+    } else if (hour >= 9 && hour < 14) {
+      easterEggs.push(
+        "上午脑力巅峰，一个好想法值一下午。",
+        "记得喝水。另外，刚才那个念头是不是还没记下来？"
+      );
+    } else if (hour >= 14 && hour < 19) {
+      easterEggs.push(
+        "下午常常有一种\"今天好像白过了\"的错觉，翻翻过往的自己，你会被治愈。",
+        "下午三点的走神时刻，是很多好想法的出生证明。"
+      );
+    } else {
+      easterEggs.push(
+        "傍晚到深夜，是 Memoria 最活跃的时间段，你也是。",
+        "睡前写一条，明天醒来会感谢今晚的自己。"
+      );
+    }
+    this.renderFact(list, "✨", pickFromPool(easterEggs, 0), true);
+
+    // ===== 最活跃的一天 =====
+    const dayMap = new Map<string, number>();
+    for (const m of this.memos)
+      dayMap.set(m.date, (dayMap.get(m.date) ?? 0) + 1);
+    const busyDay = [...dayMap.entries()].sort((a, b) => b[1] - a[1])[0];
+    this.renderFact(
+      list,
+      "📅",
+      pickFromPool(
+        [
+          `最活跃的一天：${busyDay[0]}，那天你写了 ${busyDay[1]} 条`,
+          `${busyDay[0]} 是你的"话痨日" —— 单天 ${busyDay[1]} 条，大概发生了什么好玩的？`,
+          `${busyDay[0]} 写了 ${busyDay[1]} 条，是不是那天心里装了很多东西`,
+        ],
+        1
+      )
+    );
+
+    // ===== 最长的一条 =====
+    let longest = this.memos[0];
+    for (const m of this.memos)
+      if (m.content.length > longest.content.length) longest = m;
+    this.renderFact(
+      list,
+      "📏",
+      pickFromPool(
+        [
+          `最长的一条：${longest.content.length} 字（${longest.date}）`,
+          `${longest.date} 的那条笔记 ${longest.content.length} 字，一看就是憋了很久才下笔`,
+          `史上最长：${longest.content.length} 字，${longest.date}，真·长篇巨制`,
+        ],
+        2
+      )
+    );
+
+    // ===== 最常写的星期几 =====
+    const weekdayCounter = new Array(7).fill(0);
+    for (const m of this.memos) weekdayCounter[m.datetime.getDay()]++;
+    const wdMax = Math.max(...weekdayCounter);
+    const wdIdx = weekdayCounter.indexOf(wdMax);
+    const wdName = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][
+      wdIdx
+    ];
+    this.renderFact(
+      list,
+      "📆",
+      pickFromPool(
+        [
+          `${wdName}是你写笔记最多的一天（${wdMax} 条）`,
+          `${wdName}似乎是你的"灵感日"，累计 ${wdMax} 条`,
+          `翻看历史，你特别偏爱在${wdName}记录 —— ${wdMax} 条说明问题`,
+        ],
+        3
+      )
+    );
+
+    // ===== 平均每天 =====
+    const days = dayMap.size;
+    const avg = (this.memos.length / days).toFixed(2);
+    const avgNum = parseFloat(avg);
+    this.renderFact(
+      list,
+      "💫",
+      avgNum >= 3
+        ? `活跃日平均每天 ${avg} 条 —— 挺高产的 💪`
+        : avgNum >= 1.5
+        ? `活跃日平均每天 ${avg} 条，节奏刚刚好`
+        : `活跃日平均每天 ${avg} 条，少即是多`
+    );
+
+    // ===== 带图笔记 =====
+    const imgCount = this.memos.filter((m) => m.hasImage).length;
+    if (imgCount > 0) {
+      const pct = (imgCount / this.memos.length) * 100;
+      this.renderFact(
+        list,
+        "🖼️",
+        pickFromPool(
+          [
+            `共有 ${imgCount} 条笔记带图片（${pct.toFixed(1)}%）`,
+            `${imgCount} 条笔记配了图 —— 视觉记忆有时候比文字更牢`,
+            `${pct.toFixed(0)}% 的笔记是图文并茂的，你挺重视"画面感"`,
+          ],
+          5
+        )
+      );
+    }
+
+    // ===== 凌晨笔记 =====
+    const nightCount = this.memos.filter((m) => {
+      const h = m.datetime.getHours();
+      return h >= 0 && h < 5;
+    }).length;
+    if (nightCount > 0) {
+      this.renderFact(
+        list,
+        "🌙",
+        pickFromPool(
+          [
+            `凌晨 0-5 点你写了 ${nightCount} 条，是个夜猫子呢`,
+            `凌晨灵感 ${nightCount} 次 —— 失眠的你其实很富有`,
+            `${nightCount} 次在凌晨留下过想法，那些时刻的你最诚实`,
+          ],
+          6
+        )
+      );
+    }
+
+    // ===== 连续打卡 =====
+    const streak = this.calcLongestStreak([...dayMap.keys()]);
+    this.renderFact(
+      list,
+      "🔥",
+      pickFromPool(
+        [
+          `最长连续打卡：${streak} 天`,
+          `你曾经连续 ${streak} 天没断更，这份坚持自己看了都感动`,
+          `历史最长 streak：${streak} 天 —— 可以拿来打破`,
+        ],
+        7
+      )
+    );
+
+    // ===== 跟去年比较 =====
+    const thisYear = today.getFullYear();
+    const thisYearCount = this.memos.filter((m) =>
+      m.date.startsWith(`${thisYear}-`)
+    ).length;
+    const lastYearCount = this.memos.filter((m) =>
+      m.date.startsWith(`${thisYear - 1}-`)
+    ).length;
+    if (lastYearCount > 0) {
+      const diff = thisYearCount - lastYearCount;
+      const pct = ((Math.abs(diff) / lastYearCount) * 100).toFixed(0);
+      if (diff > 0) {
+        this.renderFact(
+          list,
+          "📊",
+          `今年 ${thisYearCount} 条，比去年多了 ${pct}% —— 看得出来你更愿意记录了`
+        );
+      } else if (diff < 0) {
+        this.renderFact(
+          list,
+          "📊",
+          `今年 ${thisYearCount} 条，比去年少了 ${pct}% —— 不一定是坏事，也许只是话变少了`
+        );
+      } else {
+        this.renderFact(list, "📊", `今年和去年持平（各 ${thisYearCount} 条）`);
+      }
+    }
+
+    // ===== 最近活跃 / "催更"=====
+    const lastDate = [...dayMap.keys()].sort().pop();
+    if (lastDate) {
+      const diffDays = Math.floor(
+        (Date.now() - new Date(lastDate + "T00:00:00").getTime()) /
+          (1000 * 60 * 60 * 24)
+      );
+      if (diffDays >= 3) {
+        this.renderFact(
+          list,
+          "💭",
+          pickFromPool(
+            [
+              `你已经 ${diffDays} 天没记录新想法了，要不要随手写一条？`,
+              `${diffDays} 天没更新 —— 也许此刻脑子里那个念头就值得留下来`,
+              `距离上次记录已经 ${diffDays} 天，Memoria 有点想你`,
+            ],
+            9
+          )
+        );
+      }
+    }
+  }
+
+  // v1.1.19: 多加一个 isEgg 参数，给"今日彩蛋"一个区别于常规 fact 的视觉
+  private renderFact(
+    parent: HTMLElement,
+    icon: string,
+    text: string,
+    isEgg = false
+  ): void {
+    const row = parent.createDiv({
+      cls: "mstat-fact" + (isEgg ? " is-egg" : ""),
+    });
+    row.createSpan({ cls: "mstat-fact-icon", text: icon });
+    row.createSpan({ cls: "mstat-fact-text", text });
+  }
+
+  private calcLongestStreak(dates: string[]): number {
+    if (dates.length === 0) return 0;
+    const sorted = [...dates].sort();
+    let longest = 1;
+    let cur = 1;
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = new Date(sorted[i - 1] + "T00:00:00").getTime();
+      const curTs = new Date(sorted[i] + "T00:00:00").getTime();
+      const diff = Math.round((curTs - prev) / (24 * 60 * 60 * 1000));
+      if (diff === 1) {
+        cur++;
+        longest = Math.max(longest, cur);
+      } else if (diff > 1) {
+        cur = 1;
+      }
+    }
+    return longest;
+  }
+}
+
+function pad(n: number): string {
+  return n.toString().padStart(2, "0");
+}
+
+function fmtDate(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
