@@ -137,6 +137,8 @@ Copy-One (Join-Path $SourceDir 'main.js')       (Join-Path $ReleaseDir 'main.js'
 Copy-One (Join-Path $SourceDir 'manifest.json') (Join-Path $ReleaseDir 'manifest.json')
 Copy-One (Join-Path $SourceDir 'styles.css')    (Join-Path $ReleaseDir 'styles.css')
 Copy-One (Join-Path $SourceDir 'CHANGELOG.md')  (Join-Path $ReleaseDir 'CHANGELOG.md')
+Copy-One (Join-Path $SourceDir 'README.md')     (Join-Path $ReleaseDir 'README.md')
+Copy-One (Join-Path $SourceDir 'README.en.md')  (Join-Path $ReleaseDir 'README.en.md')
 Copy-One (Join-Path $SourceDir 'package.json')  (Join-Path $ReleaseDir 'package.json')
 Copy-One (Join-Path $SourceDir 'package-lock.json') (Join-Path $ReleaseDir 'package-lock.json')
 Copy-One (Join-Path $SourceDir 'versions.json') (Join-Path $ReleaseDir 'versions.json')

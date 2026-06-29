@@ -2,20 +2,43 @@
 
 # Memoria 🪶
 
-**浮墨式碎片笔记插件 for Obsidian**
+**A flomo-style fleeting-thoughts plugin for Obsidian**
 
-> 数据永远是纯 Markdown，自由属于你。
+> Your data stays as plain Markdown. Freedom belongs to you.
 
 [![release](https://img.shields.io/github/v/release/i-iooi-i/obsidian-memoria?include_prereleases&label=release)](https://github.com/i-iooi-i/obsidian-memoria/releases)
 [![downloads](https://img.shields.io/github/downloads/i-iooi-i/obsidian-memoria/total)](https://github.com/i-iooi-i/obsidian-memoria/releases)
 [![license](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 [![obsidian](https://img.shields.io/badge/Obsidian-1.4.0%2B-purple)](https://obsidian.md)
 
-**简体中文** · [English](./README.en.md)
+**English** · [简体中文](#简体中文)
 
 </div>
 
 ---
+
+## English
+
+Memoria is a lightweight memo plugin for Obsidian. It gives you a quick-capture input box, a waterfall-style timeline, tag search, image paste and drag support, task checkbox writeback, pinning, starring, statistics, and a year panorama view.
+
+All notes are stored as ordinary Markdown files in your vault. Memoria does not lock your data into a database or a proprietary format, so your memos remain readable and searchable even if you stop using the plugin.
+
+Main features:
+
+- Quick capture with `Ctrl/Cmd+Enter`
+- Global capture command for fast notes
+- Plain Markdown storage in yearly files
+- Tag autocomplete and combined tag/keyword search
+- Paste, drag, and file-picker image capture
+- Sidebar heatmap, calendar, statistics report, and year panorama
+- Mobile-friendly layout and touch interactions
+- Chinese and English interface languages
+
+See [README.en.md](./README.en.md) for the full English documentation.
+
+---
+
+## 简体中文
 
 ## 📸 看起来像什么样
 
