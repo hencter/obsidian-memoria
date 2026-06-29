@@ -196,7 +196,7 @@ export default class MemoriaPlugin extends Plugin {
    * 直接拼到 "- HH:MM" 行末尾导致 md 渲染错误的问题。
    */
   private async normalizeAll(): Promise<void> {
-    if (!confirm(t("notice.normalizeConfirm"))) {
+    if (!(await this.confirmAsync(t("notice.normalizeConfirm")))) {
       return;
     }
     new Notice(t("notice.normalizing"));
@@ -235,6 +235,47 @@ export default class MemoriaPlugin extends Plugin {
       console.error(e);
       new Notice(t("notice.normalizeFailed", { msg: (e as Error).message }));
     }
+  }
+
+  private confirmAsync(message: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const backdrop = activeDocument.body.createDiv({
+        cls: "memoria-modal-backdrop",
+      });
+      const box = backdrop.createDiv({ cls: "memoria-modal memoria-confirm" });
+      box.createDiv({ cls: "memoria-modal-title", text: message });
+      const btns = box.createDiv({ cls: "memoria-modal-btns" });
+      const cancel = btns.createEl("button", { text: t("input.cancel") });
+      const ok = btns.createEl("button", {
+        text: t("notice.confirmContinue"),
+        cls: "mod-warning",
+      });
+
+      let settled = false;
+      const close = (result: boolean) => {
+        if (settled) return;
+        settled = true;
+        backdrop.remove();
+        activeDocument.removeEventListener("keydown", onKey, true);
+        window.setTimeout(() => resolve(result), 0);
+      };
+      const onKey = (e: KeyboardEvent) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          close(false);
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          close(true);
+        }
+      };
+
+      cancel.addEventListener("click", () => close(false));
+      ok.addEventListener("click", () => close(true));
+      backdrop.addEventListener("mousedown", (e) => {
+        if (e.target === backdrop) close(false);
+      });
+      activeDocument.addEventListener("keydown", onKey, true);
+    });
   }
 
   private async quickCapture(): Promise<void> {

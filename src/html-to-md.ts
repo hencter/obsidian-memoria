@@ -30,13 +30,6 @@
  *   → 降级为 textContent 拼接
  */
 
-const SEMANTIC_TAGS = new Set([
-  "A", "STRONG", "B", "EM", "I", "CODE", "PRE",
-  "H1", "H2", "H3", "H4", "H5", "H6",
-  "UL", "OL", "LI", "BLOCKQUOTE", "BR", "HR",
-  "IMG",
-]);
-
 /** 判断剪贴板的 HTML 是否值得走 md 转换路径 */
 export function shouldConvertHtmlToMd(html: string): boolean {
   if (!html) return false;

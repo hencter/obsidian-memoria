@@ -108,7 +108,7 @@ const MOOD_REGEXPS: Record<Exclude<Mood, "neutral">, RegExp> = (() => {
   const compile = (keywords: string[]): RegExp => {
     const parts = keywords.map((kw) => {
       // 英文关键词（纯 ASCII）加词边界
-      if (/^[\x00-\x7F]+$/.test(kw)) {
+      if ([...kw].every((ch) => ch.charCodeAt(0) <= 0x7F)) {
         return `\\b${escapeRegExp(kw)}\\b`;
       }
       // 中文/其他：直接匹配

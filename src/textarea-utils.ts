@@ -66,7 +66,7 @@ export function replaceTextareaRange(
       // execCommand 会触发 input 事件，无需手动派发
       return;
     }
-  } catch (e) {
+  } catch {
     /* 降级 */
   }
   // Fallback: setRangeText（标准但 undo 不可靠）
@@ -76,7 +76,7 @@ export function replaceTextareaRange(
       el.setRangeText(newText, start, end, "end");
       el.dispatchEvent(new Event("input", { bubbles: true }));
       return;
-    } catch (e) {
+    } catch {
       /* 继续降级 */
     }
   }

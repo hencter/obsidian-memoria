@@ -39,8 +39,6 @@ export function renderCalendar(
   for (const m of memos) {
     dayMap.set(m.date, (dayMap.get(m.date) ?? 0) + 1);
   }
-  const max = Math.max(1, ...dayMap.values());
-
   const render = (): void => {
     container.empty();
 

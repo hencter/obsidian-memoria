@@ -17,7 +17,7 @@ import { MemoStore } from "./store";
 import { TagSuggest } from "./tag-suggest";
 import { extractImages, renderImageGrid, openLightbox } from "./image-grid";
 import { renderCalendar } from "./calendar";
-import { parseSearchQuery, matchesQuery, highlightTerms, SearchQuery, EMPTY_QUERY } from "./search";
+import { parseSearchQuery, matchesQuery, SearchQuery, EMPTY_QUERY } from "./search";
 import { pickSmartReview } from "./smart-review";
 import { detectMood, moodClass } from "./mood";
 import { t } from "./i18n";
@@ -283,7 +283,8 @@ export class MemoriaView extends ItemView {
       );
     };
     updateDensityIcon();
-    densityBtn.addEventListener("click", async () => {
+    densityBtn.addEventListener("click", () => {
+      void (async () => {
       this.settings.density =
         this.settings.density === "compact" ? "cozy" : "compact";
       await this.plugin.saveSettings();
@@ -291,6 +292,9 @@ export class MemoriaView extends ItemView {
       // 切密度需要重渲染所有卡片（紧凑模式会截短正文）
       this.mdCache.clear();
       this.renderList();
+      })().catch((err) => {
+        console.error("[Memoria] Failed to toggle density:", err);
+      });
     });
 
     // v2.0.0: 导出按钮 —— 点击弹 Menu 选格式
@@ -327,7 +331,8 @@ export class MemoriaView extends ItemView {
       attr: { "aria-label": t("toolbar.yearPanorama") },
     });
     setIcon(yearBtn, "calendar-days");
-    yearBtn.addEventListener("click", async () => {
+    yearBtn.addEventListener("click", () => {
+      void (async () => {
       const existing = this.app.workspace.getLeavesOfType(
         VIEW_TYPE_MEMORIA_YEAR
       );
@@ -341,6 +346,9 @@ export class MemoriaView extends ItemView {
         active: true,
       });
       await this.app.workspace.revealLeaf(leaf);
+      })().catch((err) => {
+        console.error("[Memoria] Failed to open year panorama:", err);
+      });
     });
 
     const statsBtn = tools.createEl("button", {
@@ -348,7 +356,8 @@ export class MemoriaView extends ItemView {
       attr: { "aria-label": t("toolbar.statsReport") },
     });
     setIcon(statsBtn, "bar-chart-3");
-    statsBtn.addEventListener("click", async () => {
+    statsBtn.addEventListener("click", () => {
+      void (async () => {
       // 在新标签页打开数据报告视图
       const existing = this.app.workspace.getLeavesOfType(
         VIEW_TYPE_MEMORIA_STATS
@@ -363,6 +372,9 @@ export class MemoriaView extends ItemView {
         active: true,
       });
       await this.app.workspace.revealLeaf(leaf);
+      })().catch((err) => {
+        console.error("[Memoria] Failed to open stats view:", err);
+      });
     });
 
     // 移动端折叠侧栏按钮
@@ -603,8 +615,9 @@ export class MemoriaView extends ItemView {
     //   常驻模式（always-visible）的 textarea 本身有 max-height 上限不会无限
     //   撑高，也不需要。彻底去掉 scrollIntoView，根除 iOS 上的抖动频闪问题。
     // 粘贴图片 + v2.0.0: 富文本 → Markdown 转换
-    this.inputEl.addEventListener("paste", async (e) => {
-      const items = e.clipboardData?.items;
+    this.inputEl.addEventListener("paste", (e) => {
+      void (async () => {
+      const items = Array.from(e.clipboardData?.items ?? []);
       if (!items) return;
       // 1) 图片（最高优先级）
       for (const it of items) {
@@ -634,6 +647,9 @@ export class MemoriaView extends ItemView {
         this.autoResizeInput();
       }
       // 否则走默认（浏览器自己处理纯文本粘贴）
+      })().catch((err) => {
+        console.error("[Memoria] Failed to handle paste:", err);
+      });
     });
     // 拖拽图片
     this.inputEl.addEventListener("dragover", (e) => {
@@ -643,7 +659,8 @@ export class MemoriaView extends ItemView {
     this.inputEl.addEventListener("dragleave", () => {
       this.inputEl.removeClass("dragging");
     });
-    this.inputEl.addEventListener("drop", async (e) => {
+    this.inputEl.addEventListener("drop", (e) => {
+      void (async () => {
       e.preventDefault();
       this.inputEl.removeClass("dragging");
       const files = Array.from(e.dataTransfer?.files ?? []);
@@ -652,6 +669,9 @@ export class MemoriaView extends ItemView {
           await this.handleImageFile(f);
         }
       }
+      })().catch((err) => {
+        console.error("[Memoria] Failed to handle dropped image:", err);
+      });
     });
 
     const inputToolbar = inputCard.createDiv({ cls: "memoria-input-toolbar" });
@@ -1257,9 +1277,13 @@ export class MemoriaView extends ItemView {
     inp.type = "file";
     inp.accept = "image/*";
     inp.multiple = true;
-    inp.addEventListener("change", async () => {
+    inp.addEventListener("change", () => {
+      void (async () => {
       const files = Array.from(inp.files ?? []);
       for (const f of files) await this.handleImageFile(f);
+      })().catch((err) => {
+        console.error("[Memoria] Failed to import selected image:", err);
+      });
     });
     inp.click();
   }
@@ -1965,7 +1989,8 @@ export class MemoriaView extends ItemView {
     const data = this.settings.buddy;
     if (!data) {
       // 未孵化 → 显示蛋
-      renderEgg(parent, async (chosenName) => {
+      renderEgg(parent, (chosenName) => {
+        void (async () => {
         const vaultName = this.app.vault.getName();
         const hatched = hatch(vaultName, chosenName);
         // 把 HatchedBuddy 持久化为 BuddyData
@@ -1984,6 +2009,9 @@ export class MemoriaView extends ItemView {
         //   .is-just-hatched class，触发"破壳而出"动画。后续再切视图就不会再播放。
         this.buddyJustHatched = true;
         this.renderSidebar();
+        })().catch((err) => {
+          console.error("[Memoria] Failed to hatch buddy:", err);
+        });
       });
       return;
     }
@@ -2013,7 +2041,11 @@ export class MemoriaView extends ItemView {
     const justHatched = this.buddyJustHatched;
     this.buddyJustHatched = false; // 标记"消费"掉，后续切视图不再播动画
     renderBuddy(parent, buddy, memos, this.buddyQuipCache, {
-      onRename: () => this.openBuddyRename(buddy.name),
+      onRename: () => {
+        void this.openBuddyRename(buddy.name).catch((err) => {
+          console.error("[Memoria] Failed to rename buddy:", err);
+        });
+      },
       justHatched,
     });
   }
@@ -2897,7 +2929,7 @@ export class MemoriaView extends ItemView {
         this.mdCache.delete(cacheKey);
         this.mdCache.set(cacheKey, cached);
       } else {
-        MarkdownRenderer.render(
+        void MarkdownRenderer.render(
           this.app,
           normalizedMd,
           body,
@@ -2913,9 +2945,11 @@ export class MemoriaView extends ItemView {
           this.mdCache.set(cacheKey, frag);
           if (this.mdCache.size > MemoriaView.MD_CACHE_MAX) {
             // 丢最老的一条（Map 保持插入顺序）
-            const firstKey = this.mdCache.keys().next().value;
-            if (firstKey !== undefined) this.mdCache.delete(firstKey);
+            const first = this.mdCache.keys().next();
+            if (!first.done) this.mdCache.delete(first.value);
           }
+        }).catch((err) => {
+          console.error("[Memoria] Failed to render markdown:", err);
         });
       }
       // 给任务列表复选框接入点击 → 修改原 md
@@ -3010,7 +3044,8 @@ export class MemoriaView extends ItemView {
     boxes.forEach((box, i) => {
       box.disabled = false;
       box.addClass("memoria-clickable");
-      box.addEventListener("click", async (e) => {
+      box.addEventListener("click", (e) => {
+        void (async () => {
         e.stopPropagation();
         const lineNum = taskLineNums[i];
         const lines = memo.content.split("\n");
@@ -3030,6 +3065,7 @@ export class MemoriaView extends ItemView {
           console.error("[Memoria] 任务勾选失败:", err);
           new Notice(t("notice.checkFailed", { msg: (err as Error).message }));
         }
+        })();
       });
     });
   }

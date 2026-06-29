@@ -16,7 +16,7 @@
  *   - 单个 memo 的"保存为图片"功能是另一个已有功能（card 右键菜单），和批量导出分开
  */
 
-import { App, Notice, normalizePath, TFile } from "obsidian";
+import { App, Notice, normalizePath } from "obsidian";
 import { Memo } from "./types";
 import { t, getCurrentLocale } from "./i18n";
 
