@@ -54,6 +54,15 @@ interface Filter {
   randomSeed?: number;
 }
 
+type ReviewTypeFilter = "all" | "starred" | "pinned" | "with-image" | "todo";
+
+interface ReviewFilters {
+  tag: string;
+  year: string;
+  type: ReviewTypeFilter;
+  keyword: string;
+}
+
 export class MemoriaView extends ItemView {
   private workspaceLeafEl: HTMLElement | null = null;
   private filter: Filter = {
@@ -62,6 +71,12 @@ export class MemoriaView extends ItemView {
     date: null,
     keyword: "",
     preset: "all",
+  };
+  private reviewFilters: ReviewFilters = {
+    tag: "",
+    year: "",
+    type: "all",
+    keyword: "",
   };
   private unsubscribe: (() => void) | null = null;
   private inputEl!: HTMLTextAreaElement;
@@ -377,15 +392,39 @@ export class MemoriaView extends ItemView {
       });
     });
 
-    // 移动端折叠侧栏按钮
+    // 侧栏切换按钮：桌面端收起侧栏，移动端打开抽屉
     const toggleBtn = topBar.createEl("button", {
       cls: "memoria-icon-btn memoria-sidebar-toggle",
-      attr: { "aria-label": t("toolbar.toggleSidebar") },
+      attr: {
+        "aria-label": t("toolbar.toggleSidebar"),
+        title: t("toolbar.toggleSidebar"),
+      },
     });
-    setIcon(toggleBtn, "menu");
+    const syncSidebarToggleIcon = () => {
+      toggleBtn.empty();
+      if (this.isMobileSidebarLayout()) {
+        setIcon(toggleBtn, "menu");
+      } else {
+        setIcon(
+          toggleBtn,
+          this.contentEl.hasClass("memoria-sidebar-collapsed")
+            ? "panel-left-open"
+            : "panel-left-close"
+        );
+      }
+    };
+    syncSidebarToggleIcon();
     toggleBtn.addEventListener("click", () => {
-      this.toggleSidebar(!this.contentEl.hasClass("memoria-sidebar-open"));
+      if (this.isMobileSidebarLayout()) {
+        this.toggleSidebar(!this.contentEl.hasClass("memoria-sidebar-open"));
+      } else {
+        this.toggleDesktopSidebar(
+          !this.contentEl.hasClass("memoria-sidebar-collapsed")
+        );
+      }
+      syncSidebarToggleIcon();
     });
+    this.registerDomEvent(window, "resize", syncSidebarToggleIcon);
 
     // 输入卡片
     this.buildInputCard(main);
@@ -747,8 +786,12 @@ export class MemoriaView extends ItemView {
 
     const submitBtn = submitWrap.createEl("button", {
       cls: "memoria-submit-btn",
+      attr: {
+        "aria-label": t("input.submit"),
+        title: t("input.submit"),
+      },
     });
-    submitBtn.setText(t("input.submit"));
+    setIcon(submitBtn, "send-horizontal");
     submitBtn.addEventListener("click", () => {
       void this.submitMemo();
     });
@@ -1489,9 +1532,19 @@ export class MemoriaView extends ItemView {
     }
   }
 
-  /** 切换侧栏（移动端用） */
+  private isMobileSidebarLayout(): boolean {
+    return window.innerWidth <= 680;
+  }
+
+  /** 切换侧栏抽屉（移动端用） */
   private toggleSidebar(open: boolean): void {
     this.contentEl.toggleClass("memoria-sidebar-open", open);
+  }
+
+  /** 收起桌面侧栏，让主内容区获得完整宽度 */
+  private toggleDesktopSidebar(collapsed: boolean): void {
+    this.contentEl.toggleClass("memoria-sidebar-collapsed", collapsed);
+    if (collapsed) this.toggleSidebar(false);
   }
 
   /** v2.0.0: 导出当前筛选结果到 vault 的 Memoria/exports/ 目录 */
@@ -2435,7 +2488,187 @@ export class MemoriaView extends ItemView {
 
   // ====================== 过滤逻辑 ======================
 
-  private getFilteredMemos(): Memo[] {
+
+  private applyReviewFilters(memos: Memo[]): Memo[] {
+    const rf = this.reviewFilters;
+    let result = memos;
+
+    if (rf.year) result = result.filter((m) => m.date.startsWith(rf.year));
+
+    if (rf.tag) {
+      result = result.filter((m) =>
+        m.tags.some((tag) => tag === rf.tag || tag.startsWith(rf.tag + "/"))
+      );
+    }
+
+    if (rf.type === "starred") result = result.filter((m) => m.isStarred);
+    else if (rf.type === "pinned") result = result.filter((m) => m.isPinned);
+    else if (rf.type === "with-image") result = result.filter((m) => m.hasImage);
+    else if (rf.type === "todo") result = result.filter((m) => m.hasOpenTask);
+
+    const keyword = rf.keyword.trim().toLocaleLowerCase();
+    if (keyword) {
+      result = result.filter((m) => {
+        const contentHit = m.content.toLocaleLowerCase().includes(keyword);
+        const tagHit = m.tags.some((tag) => tag.toLocaleLowerCase().includes(keyword));
+        return contentHit || tagHit || m.date.includes(keyword);
+      });
+    }
+
+    return result;
+  }
+
+  private getReviewFilterPoolCount(): number {
+    return this.applyReviewFilters(this.getBaseFilteredMemos()).length;
+  }
+
+  private renderReviewToolbar(parent: HTMLElement): void {
+    const bar = parent.createDiv({ cls: "memoria-review-toolbar" });
+
+    const makeSelect = <T extends string>(
+      label: string,
+      value: T,
+      options: Array<{ value: T; label: string }>,
+      onChange: (value: T) => void
+    ): void => {
+      const wrap = bar.createDiv({ cls: "memoria-review-control" });
+      const selectWrap = wrap.createDiv({ cls: "memoria-review-select-wrap" });
+      const select = selectWrap.createEl("select", {
+        cls: "memoria-review-select",
+        attr: { "aria-label": label },
+      });
+      const chevron = selectWrap.createDiv({ cls: "memoria-review-select-icon" });
+      setIcon(chevron, "chevron-down");
+      for (const option of options) {
+        select.createEl("option", {
+          text: option.label,
+          attr: { value: option.value },
+        });
+      }
+      select.value = value;
+      select.addEventListener("change", () => {
+        onChange(select.value as T);
+        this.filter.preset = "random";
+        this.filter.randomSeed = Date.now();
+        this.pageLimit = this.getInitialPageLimit();
+        this.renderList();
+      });
+    };
+
+    const memos = this.store.getAll();
+    const years = Array.from(new Set(memos.map((m) => m.date.substring(0, 4))))
+      .sort((a, b) => (a < b ? 1 : -1));
+    const tags = Array.from(
+      new Set(memos.flatMap((m) => m.tags.filter((tag) => !RESERVED_TAGS.has(tag))))
+    ).sort((a, b) => a.localeCompare(b));
+
+    makeSelect<string>(
+      t("review.filter.year"),
+      this.reviewFilters.year,
+      [
+        { value: "", label: t("review.filter.allYears") },
+        ...years.map((year) => ({ value: year, label: year })),
+      ],
+      (value) => {
+        this.reviewFilters.year = value;
+      }
+    );
+
+    makeSelect<string>(
+      t("review.filter.tag"),
+      this.reviewFilters.tag,
+      [
+        { value: "", label: t("review.filter.allTags") },
+        ...tags.map((tag) => ({ value: tag, label: `#${tag}` })),
+      ],
+      (value) => {
+        this.reviewFilters.tag = value;
+      }
+    );
+
+    makeSelect<ReviewTypeFilter>(
+      t("review.filter.type"),
+      this.reviewFilters.type,
+      [
+        { value: "all", label: t("review.type.all") },
+        { value: "starred", label: t("review.type.starred") },
+        { value: "pinned", label: t("review.type.pinned") },
+        { value: "with-image", label: t("review.type.withImage") },
+        { value: "todo", label: t("review.type.todo") },
+      ],
+      (value) => {
+        this.reviewFilters.type = value;
+      }
+    );
+
+    const keywordWrap = bar.createDiv({ cls: "memoria-review-control memoria-review-keyword" });
+    const keywordBox = keywordWrap.createDiv({ cls: "memoria-review-search-wrap" });
+    const keywordIcon = keywordBox.createDiv({ cls: "memoria-review-search-icon" });
+    setIcon(keywordIcon, "search");
+    const keywordInput = keywordBox.createEl("input", {
+      cls: "memoria-review-input",
+      attr: {
+        type: "text",
+        placeholder: t("review.keyword.placeholder"),
+        "aria-label": t("review.filter.keyword"),
+      },
+    });
+    keywordInput.value = this.reviewFilters.keyword;
+    let isComposingKeyword = false;
+    const applyKeywordNow = () => {
+      const cursor = keywordInput.selectionStart ?? keywordInput.value.length;
+      this.reviewFilters.keyword = keywordInput.value.trim();
+      this.filter.preset = "random";
+      this.filter.randomSeed = Date.now();
+      this.pageLimit = this.getInitialPageLimit();
+      this.renderList();
+      const nextInput = this.listEl.querySelector<HTMLInputElement>(".memoria-review-input");
+      nextInput?.focus();
+      nextInput?.setSelectionRange(cursor, cursor);
+    };
+    const applyKeyword = debounce(() => {
+      if (!isComposingKeyword) applyKeywordNow();
+    }, 180);
+    keywordInput.addEventListener("compositionstart", () => {
+      isComposingKeyword = true;
+    });
+    keywordInput.addEventListener("compositionend", () => {
+      isComposingKeyword = false;
+      applyKeywordNow();
+    });
+    keywordInput.addEventListener("input", () => {
+      if (!isComposingKeyword) applyKeyword();
+    });
+
+    const actions = bar.createDiv({ cls: "memoria-review-actions" });
+    const rerollBtn = actions.createEl("button", { cls: "memoria-meta-btn" });
+    setIcon(rerollBtn.createSpan(), "shuffle");
+    rerollBtn.createSpan({ text: t("meta.reroll") });
+    rerollBtn.addEventListener("click", () => {
+      this.filter.preset = "random";
+      this.filter.randomSeed = Date.now();
+      this.renderList();
+    });
+
+    const resetBtn = actions.createEl("button", { cls: "memoria-meta-btn" });
+    setIcon(resetBtn.createSpan(), "rotate-ccw");
+    resetBtn.createSpan({ text: t("review.filter.reset") });
+    resetBtn.addEventListener("click", () => {
+      this.reviewFilters = { tag: "", year: "", type: "all", keyword: "" };
+      this.filter.randomSeed = Date.now();
+      this.renderList();
+    });
+
+    const backBtn = actions.createEl("button", { cls: "memoria-meta-btn" });
+    setIcon(backBtn.createSpan(), "history");
+    backBtn.createSpan({ text: t("meta.backToOnThisDay") });
+    backBtn.addEventListener("click", () => {
+      this.filter.preset = "on-this-day";
+      this.renderList();
+    });
+  }
+
+  private getBaseFilteredMemos(): Memo[] {
     const all = this.store.getAll();
 
     // v2.0.0: 新的高级搜索语法（兼容旧的"#tag 关键词"）
@@ -2503,30 +2736,30 @@ export class MemoriaView extends ItemView {
       result = result.filter((m) => m.isStarred);
     } else if (this.filter.preset === "todo") {
       result = result.filter((m) => m.hasOpenTask);
-    } else if (this.filter.preset === "random" && result.length) {
-      // v2.0.0: 如果开了智能回顾，用智能挑选替代伪随机。
-      //   智能会利用"今天写了什么 + 最近看过什么"做加权排序。
-      //   关掉 enableSmartReview 就回退到原有的 seededSample 行为。
-      if (this.settings.enableSmartReview) {
-        const todayMemos = all.filter((m) => m.date === todayStr);
-        result = pickSmartReview(result, {
-          count: Math.min(5, result.length),
-          todayStr,
-          todayMemos,
-        });
-      } else {
-        const seed = this.filter.randomSeed ?? 1;
-        const RANDOM_COUNT = 5;
-        result = seededSample(
-          result,
-          Math.min(RANDOM_COUNT, result.length),
-          seed
-        );
-      }
     }
     return result;
   }
 
+
+  private getFilteredMemos(): Memo[] {
+    let result = this.getBaseFilteredMemos();
+    const todayStr = fmtDateLocal(new Date());
+    if (this.filter.preset === "random" || this.filter.preset === "on-this-day") {
+      result = this.applyReviewFilters(result);
+      if (!result.length) return result;
+      if (this.settings.enableSmartReview) {
+        const todayMemos = this.store.getAll().filter((m) => m.date === todayStr);
+        return pickSmartReview(result, {
+          count: Math.min(5, result.length),
+          todayStr,
+          todayMemos,
+        });
+      }
+      const seed = this.filter.randomSeed ?? 1;
+      return seededSample(result, Math.min(5, result.length), seed);
+    }
+    return result;
+  }
   private renderList(): void {
     this.listEl.empty();
     this.childComponent.unload();
@@ -2552,24 +2785,13 @@ export class MemoriaView extends ItemView {
     //   - "on-this-day" 且有结果：显示主副标题说明
     //   - "random" 模式：显示"换一批"
     //   - "on-this-day" 且 empty 时，在 empty state 里给"随机 5 条"跳转
-    if (this.filter.preset === "random") {
-      const rerollBtn = meta.createEl("button", { cls: "memoria-meta-btn" });
-      setIcon(rerollBtn.createSpan(), "shuffle");
-      rerollBtn.createSpan({ text: t("meta.reroll") });
-      rerollBtn.addEventListener("click", () => {
-        this.filter.randomSeed = Date.now();
-        this.renderList();
+    if (this.filter.preset === "random" || this.filter.preset === "on-this-day") {
+      meta.createDiv({
+        cls: "memoria-list-meta-right",
+        text: t("review.poolCount", { n: this.getReviewFilterPoolCount() }),
       });
-      // 顺便提供"回到往年今天"的返程入口
-      const backBtn = meta.createEl("button", { cls: "memoria-meta-btn" });
-      setIcon(backBtn.createSpan(), "history");
-      backBtn.createSpan({ text: t("meta.backToOnThisDay") });
-      backBtn.addEventListener("click", () => {
-        this.filter.preset = "on-this-day";
-        this.renderList();
-      });
+      this.renderReviewToolbar(this.listEl);
     }
-
     if (memos.length === 0) {
       const empty = this.listEl.createDiv({ cls: "memoria-empty" });
       // v1.1.19: 在"回顾-每日"模式下给随机 5 条的跳转，避免死页面
@@ -4647,3 +4869,12 @@ function normalizeForRender(raw: string): string {
 
   return out.join("\n");
 }
+
+
+
+
+
+
+
+
+

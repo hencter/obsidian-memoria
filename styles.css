@@ -1,4 +1,4 @@
-﻿/* ================================================================
+/* ================================================================
  * Memoria 样式（完全基于 Obsidian CSS 变量，自动跟随主题）
  * ================================================================ */
 
@@ -11,7 +11,6 @@
 .memoria-root button.memoria-cal-nav,
 .memoria-root button.memoria-overview-btn,
 .memoria-root button.memoria-edit-cancel,
-.memoria-root button.memoria-meta-btn,
 .memoria-root button.memoria-submit-btn {
   box-shadow: none;
   /* 关键：覆盖 Obsidian 默认按钮的背景边框 */
@@ -60,6 +59,23 @@
   padding: 16px 10px 24px;
   border-right: 1px solid var(--background-modifier-border);
   background: var(--background-primary);
+  transition:
+    width 0.18s ease,
+    padding 0.18s ease,
+    border-color 0.18s ease,
+    opacity 0.16s ease;
+}
+
+@media (min-width: 681px) {
+  .memoria-root.memoria-sidebar-collapsed .memoria-sidebar {
+    width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    border-right-color: transparent;
+    opacity: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
 }
 
 /* 统计条 */
@@ -595,17 +611,25 @@
   color: var(--text-faint);
 }
 .memoria-root button.memoria-submit-btn {
-  padding: 5px 18px;
+  width: 38px;
+  height: 32px;
+  padding: 0;
   border: none;
   /* v1.4.2: 用主题 accent 色 + 对抗某些主题对 button 的全局背景覆盖 */
   background: var(--interactive-accent);
   color: var(--text-on-accent);
-  font-size: 13px;
-  font-weight: 500;
   border-radius: 6px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: background 0.12s, filter 0.12s;
   box-shadow: none;
+}
+.memoria-root button.memoria-submit-btn .svg-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.4;
 }
 .memoria-root button.memoria-submit-btn:hover {
   background: var(--interactive-accent-hover);
@@ -632,24 +656,151 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
+  min-height: 30px;
+  padding: 4px 12px;
   border: 1px solid var(--background-modifier-border);
-  background: transparent;
-  color: var(--text-muted);
   border-radius: 999px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: background 0.12s;
+  background: var(--background-modifier-form-field);
+  color: var(--text-muted);
+  box-shadow: none;
+  font-size: var(--font-ui-small);
+  line-height: 1;
 }
-.memoria-root button.memoria-meta-btn:hover {
-  background: var(--background-modifier-hover);
+.memoria-root button.memoria-meta-btn:hover,
+.memoria-root button.memoria-meta-btn:focus-visible {
+  border-color: var(--interactive-accent);
   color: var(--text-normal);
 }
 .memoria-root button.memoria-meta-btn .svg-icon {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
 }
 
+
+.memoria-review-toolbar {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 4px 14px;
+  padding: 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  background: var(--background-primary-alt, var(--background-secondary));
+}
+
+.memoria-review-control {
+  display: flex;
+  min-width: 120px;
+}
+
+.memoria-review-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.memoria-review-select {
+  width: 100%;
+  min-height: var(--input-height);
+  padding-right: 30px;
+  font-size: var(--font-ui-small);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.memoria-review-select::-ms-expand {
+  display: none;
+}
+
+.memoria-review-select-icon {
+  position: absolute;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+.memoria-review-select-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.memoria-review-keyword {
+  flex: 1 1 220px;
+}
+
+.memoria-review-search-wrap {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 4px;
+  min-height: var(--input-height);
+  padding: 0 8px 0 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  background: var(--background-modifier-form-field);
+  transition: border-color 0.15s;
+}
+.memoria-review-search-wrap:focus-within {
+  border-color: var(--interactive-accent);
+}
+.memoria-review-search-icon {
+  display: flex;
+  align-items: center;
+  color: var(--text-faint);
+}
+.memoria-review-search-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+.memoria-review-input {
+  width: 100%;
+  min-height: var(--input-height);
+  padding: 6px 4px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-normal);
+  box-shadow: none;
+  font-size: var(--font-ui-small);
+  outline: none;
+}
+.memoria-review-input:hover,
+.memoria-review-input:focus,
+.memoria-review-input:active {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+}
+
+.memoria-review-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
+@media (max-width: 680px) {
+  .memoria-review-toolbar {
+    align-items: stretch;
+    margin-inline: 0;
+  }
+
+  .memoria-review-control {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+  }
+
+  .memoria-review-keyword,
+  .memoria-review-actions {
+    flex: 1 1 100%;
+  }
+}
 .memoria-empty {
   padding: 100px 24px 40px;
   text-align: center;
@@ -816,7 +967,9 @@
   padding: 1px 5px;
   background: var(--background-modifier-hover);
   border-radius: 3px;
+  font-family: var(--font-monospace);
   font-size: 0.9em;
+  white-space: break-spaces;
 }
 
 /* 代码块 <pre>：跟随 Obsidian 原生外观（带背景和细边框） */
@@ -836,6 +989,7 @@
   padding: 0;
   background: transparent;
   border-radius: 0;
+  font-family: var(--font-monospace);
   font-size: inherit;
   color: var(--text-normal);
   white-space: pre;
@@ -1527,9 +1681,9 @@
 
 /* ================== 响应式 ================== */
 
-/* 默认隐藏侧栏折叠按钮（桌面端不需要） */
+/* 侧栏切换按钮：桌面端收起侧栏，移动端打开抽屉 */
 .memoria-sidebar-toggle {
-  display: none !important;
+  display: inline-flex;
 }
 
 @media (max-width: 860px) {
@@ -1592,9 +1746,8 @@
     pointer-events: auto;
     cursor: pointer;
   }
-  /* 显示折叠按钮 */
+  /* 手机端把侧栏按钮放到左侧，用作抽屉入口 */
   .memoria-sidebar-toggle {
-    display: inline-flex !important;
     margin-right: 6px;
     order: -1;
   }
@@ -3679,13 +3832,14 @@
   align-items: baseline;
   justify-content: space-between;
   font-size: 10px;
+  white-space: nowrap;
   /* 绝对定位，脱离布局流（不占高度）
    * v2.1.0-iter18: top 改为负值，让 hover 时顶栏浮在卡片上方边界外，
    *   不挤压 ASCII（卡片 padding-top 已经为 0）*/
   position: absolute;
   top: -14px;
-  left: 8px;
-  right: 8px;
+  left: 4px;
+  right: 4px;
   /* 默认隐藏 */
   opacity: 0;
   visibility: hidden;
@@ -3725,7 +3879,7 @@
 .memoria-buddy-rarity-wrap {
   display: inline-flex;
   align-items: baseline;
-  gap: 4px;
+  gap: 3px;
 }
 .memoria-buddy-rarity {
   color: var(--text-muted);
@@ -3743,7 +3897,8 @@
 .memoria-buddy-days {
   font-size: 9.5px;
   color: var(--text-faint);
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
 }
 
 /* ========== 主角区：ASCII 精灵 ========== */
@@ -3833,16 +3988,19 @@
 }
 .memoria-buddy-stat-row {
   display: grid;
-  grid-template-columns: 38px 1fr 22px;
+  grid-template-columns: minmax(58px, max-content) minmax(66px, 1fr) 22px;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 10px;
+  white-space: nowrap;
   font-family: var(--font-monospace);
 }
 .memoria-buddy-stat-label {
   color: var(--text-muted);
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* 进度条：极薄 + 无背景框 + 进度条本身降饱和度 */
 .memoria-buddy-stat-bar {
@@ -4311,9 +4469,29 @@
 .memoria-root input.memoria-search,
 .memoria-root input.memoria-search:hover,
 .memoria-root input.memoria-search:focus,
-.memoria-root input.memoria-search:active {
+.memoria-root input.memoria-search:active,
+.memoria-root input.memoria-review-input,
+.memoria-root input.memoria-review-input:hover,
+.memoria-root input.memoria-review-input:focus,
+.memoria-root input.memoria-review-input:active {
   border: none !important;
   background: transparent !important;
   outline: none !important;
   box-shadow: none !important;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

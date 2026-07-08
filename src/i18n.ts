@@ -77,6 +77,22 @@ const zhCN: Dict = {
   "list.noText": "（无文字）",
   "list.imageHolder": "[图]",
 
+  // 回顾筛选
+  "review.poolCount": "筛选池 {n} 条",
+  "review.filter.year": "年份",
+  "review.filter.allYears": "全部年份",
+  "review.filter.tag": "标签",
+  "review.filter.allTags": "全部标签",
+  "review.filter.type": "类型",
+  "review.filter.keyword": "关键词",
+  "review.filter.reset": "重置",
+  "review.keyword.placeholder": "在回顾里搜索",
+  "review.type.all": "全部类型",
+  "review.type.starred": "收藏",
+  "review.type.pinned": "置顶",
+  "review.type.withImage": "有图片",
+  "review.type.todo": "待办",
+
   // 导出 HTML 页面
   "export.exportedAt": "{date} 导出",
   "export.footer": "由 Memoria · Obsidian Plugin 导出",
@@ -586,6 +602,22 @@ const enUS: Dict = {
   "list.noText": "(no text)",
   "list.imageHolder": "[image]",
 
+  // Review filters
+  "review.poolCount": "Pool {n}",
+  "review.filter.year": "Year",
+  "review.filter.allYears": "All years",
+  "review.filter.tag": "Tag",
+  "review.filter.allTags": "All tags",
+  "review.filter.type": "Type",
+  "review.filter.keyword": "Keyword",
+  "review.filter.reset": "Reset",
+  "review.keyword.placeholder": "Search review",
+  "review.type.all": "All types",
+  "review.type.starred": "Starred",
+  "review.type.pinned": "Pinned",
+  "review.type.withImage": "With image",
+  "review.type.todo": "To-do",
+
   // Export HTML page
   "export.exportedAt": "Exported {date}",
   "export.footer": "Exported by Memoria · Obsidian Plugin",
@@ -876,11 +908,11 @@ const enUS: Dict = {
   "buddy.stage.baby": "Baby",
   "buddy.stage.teen": "Teen",
   "buddy.stage.adult": "Adult",
-  "buddy.stat.debugging": "DEBUGGING",
-  "buddy.stat.patience": "PATIENCE",
-  "buddy.stat.chaos": "CHAOS",
-  "buddy.stat.wisdom": "WISDOM",
-  "buddy.stat.snark": "SNARK",
+  "buddy.stat.debugging": "Debugging",
+  "buddy.stat.patience": "Patience",
+  "buddy.stat.chaos": "Chaos",
+  "buddy.stat.wisdom": "Wisdom",
+  "buddy.stat.snark": "Snark",
   // Stat tooltips (hover-explained algorithm + how to level up)
   "buddy.stat.tip.debugging": "Memos using lists / tasks / quotes / links / headings (use more markdown structures to raise)",
   "buddy.stat.tip.patience": "Average memo length (write a long reflection occasionally to raise)",
@@ -1094,3 +1126,6 @@ export function t(key: string, params?: Record<string, string | number>): string
 export function getCurrentLocale(): "zh-CN" | "en-US" {
   return resolveLocale(currentLocale);
 }
+
+
+

@@ -29,7 +29,7 @@
  */
 
 import { Memo } from "../types";
-import { t } from "../i18n";
+import { getCurrentLocale, t } from "../i18n";
 import { HatchedBuddy, daysSinceHatch } from "./hatch";
 import { SPECIES, Rarity } from "./species";
 import { SPRITES, HAT_RENDERS } from "./sprites";
@@ -162,10 +162,13 @@ export function renderBuddy(
   topbar.createSpan({
     cls: "memoria-buddy-days",
     // v2.1.0-iter10: 首日显示"陪你的第 1 天"而不是"已陪你 0 天"
-    //   后者会让用户有"陪伴还没开始"的失落感
-    text: days === 0
-      ? t("buddy.daysCompanion.first")
-      : t("buddy.daysCompanion", { n: days }),
+    //   后者会让用户有"陪伴还没开始"的失落感。
+    // 英文界面空间更紧，hover 顶栏用紧凑的 1 day / 60 days，避免换成两行。
+    text: getCurrentLocale() === "en-US"
+      ? (days <= 1 ? "1 day" : `${days} days`)
+      : days === 0
+        ? t("buddy.daysCompanion.first")
+        : t("buddy.daysCompanion", { n: days }),
   });
 
   // ===== ASCII 精灵 =====
@@ -333,3 +336,6 @@ export function renderEgg(
   });
   window.setTimeout(() => input.focus(), 50);
 }
+
+
+
