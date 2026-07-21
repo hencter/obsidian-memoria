@@ -2896,18 +2896,23 @@ export class MemoriaView extends ItemView {
       cardContainer = this.listEl;
     }
 
-    // 1) 先渲染"置顶"分组（不分日期，所有置顶一起）
+    // 1) 先渲染"置顶"分组
     if (pinnedMemos.length) {
-      const pinGroup = cardContainer.createDiv({
-        cls: "memoria-day-group memoria-pin-group",
-      });
-      const pinHead = pinGroup.createDiv({
-        cls: "memoria-day-head memoria-pin-head",
-      });
-      const pinIcon = pinHead.createSpan({ cls: "memoria-pin-head-icon" });
-      setIcon(pinIcon, "pin");
-      pinHead.createSpan({ text: t("list.pinnedHead", { n: pinnedMemos.length }) });
-      for (const m of pinnedMemos) this.renderMemoCard(pinGroup, m, waterfall);
+      if (waterfall) {
+        // 瀑布流模式：置顶卡片直接融入流中，只通过 pin 标识区分
+        for (const m of pinnedMemos) this.renderMemoCard(cardContainer, m, true);
+      } else {
+        const pinGroup = cardContainer.createDiv({
+          cls: "memoria-day-group memoria-pin-group",
+        });
+        const pinHead = pinGroup.createDiv({
+          cls: "memoria-day-head memoria-pin-head",
+        });
+        const pinIcon = pinHead.createSpan({ cls: "memoria-pin-head-icon" });
+        setIcon(pinIcon, "pin");
+        pinHead.createSpan({ text: t("list.pinnedHead", { n: pinnedMemos.length }) });
+        for (const m of pinnedMemos) this.renderMemoCard(pinGroup, m, false);
+      }
     }
 
     // 2) 普通笔记：瀑布流模式直接渲染卡片，列表模式按天分组

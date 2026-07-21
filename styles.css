@@ -676,6 +676,19 @@
   break-inside: avoid;
   margin-bottom: 14px;
 }
+/* 瀑布流卡片有机变化：交替微妙色调 */
+.memoria-waterfall-grid .memoria-card:nth-child(3n+1) {
+  background: color-mix(in srgb, var(--background-primary-alt, var(--background-secondary)) 95%, var(--text-accent) 5%);
+}
+.memoria-waterfall-grid .memoria-card:nth-child(3n+2) {
+  background: color-mix(in srgb, var(--background-primary-alt, var(--background-secondary)) 97%, var(--text-muted) 3%);
+}
+.memoria-waterfall-grid .memoria-card:nth-child(5n+3) {
+  border-radius: 6px 14px 14px 10px;
+}
+.memoria-waterfall-grid .memoria-card:nth-child(5n+1) {
+  border-radius: 12px 6px 12px 10px;
+}
 .memoria-waterfall-grid .memoria-load-more {
   column-span: all;
 }
