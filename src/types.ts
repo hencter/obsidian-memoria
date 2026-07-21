@@ -41,24 +41,17 @@ export interface MemoriaSettings {
   pageSize: number;
   /** 是否在侧栏显示标签树（关闭后用 Obsidian 自带的标签栏） */
   showSidebarTags: boolean;
-  /** v2.3.0: 是否在侧栏显示「年份」分组列表。
-   *   笔记跨度长（8 年甚至更多）的用户，右侧年份列表会很长造成视觉干扰，
-   *   关闭后可隐藏。默认 true（沿用老行为，不影响现有用户） */
+  /** v2.3.0: 是否在侧栏显示「年份」分组列表。 */
   showSidebarYears: boolean;
   /** v1.1.9: 删除笔记时保留到 _trash.md（关掉就是硬删除） */
   useTrash: boolean;
-  /** v1.2.3: 导出图片的背景主题。
-   *   "auto" = 跟随 Obsidian 浅/深色
-   *   "random" = 每次从预设色板随机一种
-   *   预设 id：paper / kraft / mint / peach / sky / lavender / midnight / charcoal
-   */
+  /** v1.2.3: 导出图片的背景主题。 */
   exportTheme: string;
   /** v1.3.0: 长笔记自动折叠的行数阈值。0 = 永不折叠 */
   collapseLineLimit: number;
   /** v1.4.0: 每日目标笔记数（侧栏进度条的满值）。范围 1-30 */
   dailyGoal: number;
-  /** v1.4.3: 回收站最大条数上限（FIFO 滚动，超出后最旧的被丢弃）。
-   *   0 = 不限制（不推荐，长期会让 _trash.md 膨胀影响性能） */
+  /** v1.4.3: 回收站最大条数上限（FIFO 滚动，超出后最旧的被丢弃）。 */
   trashMaxItems: number;
   /** v2.0.0: 视图密度。compact = 紧凑模式，每张卡只显示前几行 */
   density: "cozy" | "compact";
@@ -70,26 +63,16 @@ export interface MemoriaSettings {
   enableSmartReview: boolean;
   /** v2.0.0: UI 语言。"auto" 会跟随 Obsidian 的 moment locale；否则强制指定 */
   language: "auto" | "zh-CN" | "en-US";
-  /** v2.0.16: 发送快捷键模式。
-   *   "ctrl-enter"  → Ctrl/Cmd+Enter 发送，Enter 换行（默认，对齐 flomo）
-   *   "enter"       → Enter 发送，Shift+Enter 换行（适合环境中 Ctrl+Enter 被占用的用户） */
+  /** v2.0.16: 发送快捷键模式。 */
   sendHotkey: "enter" | "ctrl-enter";
-  /** v2.0.20: 侧栏顶部默认视图
-   *   "heatmap"  → 热力图（默认，沿用老行为）
-   *   "calendar" → 月历
-   *   "buddy"    → 宠物（v2.1.0 新增）
-   *   只影响"第一次打开 Memoria"时显示哪个；用户点切换按钮时的临时切换
-   *   只在当前会话生效，不回写此设置（避免"这次我想看月历"被当成"我改默认值"）*/
+  /** v2.0.20: 侧栏顶部默认视图 */
   defaultOverviewMode: "heatmap" | "calendar" | "buddy";
-  /** v2.1.0: 宠物系统
-   *   未孵化时 buddy 字段为 null；首次切到宠物视图时引导孵化 */
+  /** v2.1.0: 宠物系统 */
   buddy: BuddyData | null;
-  /** v2.2.0: 移动端输入框入口模式
-   *   "fab"            → 默认隐藏输入卡片，右下角浮动 ➕ 按钮（FAB），
-   *                      点击 FAB 才展开输入框，对齐 flomo / Memos 移动端体验
-   *   "always-visible" → 输入框常驻底部（v2.1.x 及之前的行为）
-   *   仅触屏设备生效（hover: none + pointer: coarse），桌面端永远常驻 */
+  /** v2.2.0: 移动端输入框入口模式 */
   mobileInputStyle: "fab" | "always-visible";
+  /** v3.0.0: 存储模式。daily = 日记格式 YYYY-MM-DD.md；yearly = 年格式 YYYY.md */
+  storageMode: "daily" | "yearly";
 }
 
 /** v2.1.0: 宠物存档数据（保存在 data.json 里） */
@@ -125,6 +108,7 @@ export const DEFAULT_SETTINGS: MemoriaSettings = {
   defaultOverviewMode: "heatmap",
   buddy: null,
   mobileInputStyle: "fab",
+  storageMode: "daily",
 };
 
 export const VIEW_TYPE_MEMORIA = "memoria-view";

@@ -1,6 +1,7 @@
 // ================= 数据存储层 =================
 // 负责从 vault 读取 md 文件 -> 解析成 memos
 // 追加新 memo、删除、编辑、置顶/收藏
+// v3.0.0: 存储方式改为日记格式 YYYY-MM-DD.md（每篇为独立天文件）
 
 import { App, TFile, normalizePath } from "obsidian";
 import { Memo, MemoriaSettings, PIN_TAG, STAR_TAG } from "./types";
@@ -17,16 +18,10 @@ export class MemoStore {
   private memos: Memo[] = [];
   private listeners: Array<() => void> = [];
   private loading = false;
-  /** v1.1.15 初版：每个文件一条 Promise 链（prev.then 套 prev.then...）保证串行。
-   *  v1.4.11 改版：改为 running/pending flag，避免长期频繁写入时 Promise 链无限累积
-   *    造成内存泄漏 + 每次新 reloadFile 要等前面全部 N 次做完。
-   *    新策略：同一文件正在跑就标记 pending=true，当前这次跑完再跑一次（合并掉中间所有），
-   *    任何时刻同一文件最多有 2 次待办（正在跑 + 最多 1 次待跑）。 */
   private reloadLocks = new Map<string, { running: boolean; pending: boolean }>();
 
   constructor(private app: App, private settings: MemoriaSettings) {}
 
-  /** 订阅数据变更 */
   onChange(cb: () => void): () => void {
     this.listeners.push(cb);
     return () => {
@@ -38,8 +33,6 @@ export class MemoStore {
     for (const l of this.listeners) l();
   }
 
-  /** v1.4.11: 仅触发监听器重渲染，不改动 memos 数据。
-   *   用于设置项变更后刷 UI（替代原来误调的 reloadAll）。 */
   notifyChange(): void {
     this.emit();
   }
@@ -48,9 +41,6 @@ export class MemoStore {
     return this.memos;
   }
 
-  /** 扫描 folder 下的所有 md 文件，重建 memo 列表
-   *  v1.4.11: 改为并行读取（之前 for await 串行，5 个年份文件要等 200-400ms）
-   *    并行后大致压到 50-80ms。parseFile 是纯 CPU，不用担心顺序问题。 */
   async reloadAll(): Promise<void> {
     if (this.loading) return;
     this.loading = true;
@@ -72,29 +62,19 @@ export class MemoStore {
     }
   }
 
-  /** 文件内容变化时重载单个文件
-   *  v1.4.11: running/pending flag 策略（见类顶部注释），取代原来的 Promise 链。
-   *    同一文件任意时刻最多执行 2 次：正在跑 + 最多 1 次 pending。
-   *    好处：
-   *      1. 不会无限累积 Promise 引用（内存泄漏）
-   *      2. addMemo 主动 reload + vault.modify 事件 reload 两次会被合并为 1 次
-   *      3. 用户连发多条时尾部 reload 不需要排队等前面所有做完 */
   async reloadFile(file: TFile): Promise<void> {
     if (!this.isInFolder(file)) return;
     const key = file.path;
     const existing = this.reloadLocks.get(key);
     if (existing && existing.running) {
-      // 已有任务在跑，标记待跑一次即可（多次调用合并为 1 次）
       existing.pending = true;
       return;
     }
     const state = { running: true, pending: false };
     this.reloadLocks.set(key, state);
     try {
-      // 只要有人在我跑的过程中标 pending，就再跑一次
       do {
         state.pending = false;
-        // 文件可能在排队期间被删了，重读前再取一次
         const current = this.app.vault.getAbstractFileByPath(key);
         if (!(current instanceof TFile)) break;
         const raw = await this.app.vault.read(current);
@@ -109,19 +89,12 @@ export class MemoStore {
     }
   }
 
-  /** 指定文件从 memo 列表中移除 */
   removeFile(path: string): void {
     const before = this.memos.length;
     this.memos = this.memos.filter((m) => m.file !== path);
     if (this.memos.length !== before) this.emit();
   }
 
-  /**
-   * 排序：
-   *   1) 置顶的永远在最前
-   *   2) 其他按 datetime 降序
-   *   3) 同分钟按文件行号倒序（更晚追加的在前）
-   */
   private sortMemos(arr: Memo[]): void {
     arr.sort((a, b) => {
       if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
@@ -136,7 +109,6 @@ export class MemoStore {
     const folder = normalizePath(this.settings.folder);
     return this.app.vault.getMarkdownFiles().filter((f) => {
       const p = f.path;
-      // v1.1.9: 忽略以 `_` 开头的 md（约定为"非笔记"特殊文件，如 _trash.md）
       if (f.name.startsWith("_")) return false;
       return p === `${folder}/${f.name}` || p.startsWith(`${folder}/`);
     });
@@ -144,7 +116,6 @@ export class MemoStore {
 
   isInFolder(file: TFile): boolean {
     const folder = normalizePath(this.settings.folder);
-    // v1.1.9: _trash.md 等"_"前缀文件不算入正常笔记扫描范围
     if (file.name.startsWith("_")) return false;
     return file.path.startsWith(`${folder}/`);
   }
@@ -154,15 +125,47 @@ export class MemoStore {
     content = content.trim();
     if (!content) return;
 
-    const year = when.getFullYear().toString();
     const dateStr = fmtDate(when);
     const timeStr = fmtTime(when);
-    const weekday = fmtWeekday(when);
-
     const folder = normalizePath(this.settings.folder);
     await this.ensureFolder(folder);
-    const filePath = `${folder}/${year}.md`;
 
+    if (this.settings.storageMode === "yearly") {
+      await this.addMemoYearly(folder, when, dateStr, timeStr, content);
+    } else {
+      await this.addMemoDaily(folder, dateStr, timeStr, content);
+    }
+  }
+
+  private async addMemoDaily(
+    folder: string,
+    dateStr: string,
+    timeStr: string,
+    content: string
+  ): Promise<void> {
+    const filePath = `${folder}/${dateStr}.md`;
+    const file = this.app.vault.getAbstractFileByPath(filePath) as TFile | null;
+    if (!file) {
+      await this.app.vault.create(filePath, renderMemo(timeStr, content) + "\n");
+    } else {
+      const raw = await this.app.vault.read(file);
+      const next = this.insertMemoIntoDay(raw, timeStr, content);
+      await this.app.vault.modify(file, next);
+    }
+    const f = this.app.vault.getAbstractFileByPath(filePath);
+    if (f instanceof TFile) await this.reloadFile(f);
+  }
+
+  private async addMemoYearly(
+    folder: string,
+    when: Date,
+    dateStr: string,
+    timeStr: string,
+    content: string
+  ): Promise<void> {
+    const year = when.getFullYear().toString();
+    const weekday = fmtWeekday(when);
+    const filePath = `${folder}/${year}.md`;
     const file = this.app.vault.getAbstractFileByPath(filePath) as TFile | null;
     if (!file) {
       const initial = `# ${year}\n\n## ${dateStr} ${weekday}\n\n${renderMemo(
@@ -186,10 +189,7 @@ export class MemoStore {
     if (f instanceof TFile) await this.reloadFile(f);
   }
 
-  /** 编辑一条 memo
-   *  v1.1.15: 写入前用最新文件内容重新 parse，按 (date, time) + 原 range 附近定位
-   *    真实行号；如果 memo 已不存在（被外部删了）或位置完全对不上，抛错让上层提示用户刷新，
-   *    避免用过期 range 盲写损坏相邻 memo。 */
+  /** 编辑一条 memo（在原文件中原地修改） */
   async editMemo(memo: Memo, newContent: string): Promise<void> {
     newContent = newContent.trim();
     if (!newContent) return;
@@ -198,7 +198,6 @@ export class MemoStore {
     const raw = await this.app.vault.read(file);
     const lines = raw.split(/\r?\n/);
 
-    // 先尝试用原 range 直接确认：range 内首行应该还是 "- HH:MM"（容错两种格式）
     const [s0, e0] = memo.range;
     const memoHeadRe = new RegExp(`^-\\s+${memo.time}(?:\\s|$)`);
     let s = s0;
@@ -206,14 +205,6 @@ export class MemoStore {
     const headOk = s0 >= 0 && s0 < lines.length && memoHeadRe.test(lines[s0]);
 
     if (!headOk) {
-      // 原 range 已失效（文件在编辑期间被外部改动）→ 重新 parse 定位
-      //
-      // v1.4.11: 修复"同分钟同内容多条笔记"会把编辑写错到同胞条上的 bug。
-      //   之前 fresh.find(m => 三项全等) 碰到两条完全相同的 memo（同时间 + 同内容）
-      //   只会匹配第一条。现在改为：
-      //     1. 先精确命中 date+time+content+原 range 起点
-      //     2. 退化到仅命中 date+time+content 的候选里挑 range[0] 最接近 s0 的
-      //     3. 都没命中才报错
       const fresh = parseFile(file.path, raw);
       const candidates = fresh.filter(
         (m) =>
@@ -224,7 +215,6 @@ export class MemoStore {
       if (candidates.length === 0) {
         throw new Error(t("error.fileChanged"));
       }
-      // 按 range[0] 到 s0 的距离升序，距离相同时取 range[0] 更小的（更靠前）
       candidates.sort((a, b) => {
         const da = Math.abs(a.range[0] - s0);
         const db = Math.abs(b.range[0] - s0);
@@ -240,20 +230,7 @@ export class MemoStore {
     await this.reloadFile(file);
   }
 
-  /** v1.6.0: 修改一条已存在 memo 的时间（年/月/日/时/分），可同时修改正文。
-   *   实现策略：在源位置删除原 memo 块 + 在新时间位置插入新内容。
-   *
-   *   边界处理：
-   *     1. 同年改日期或时间 → 同一文件内"块搬家"：先 splice 删旧位置，
-   *        再调 insertMemoIntoYear 重新插入到目标日期块下。
-   *     2. 跨年改 → 旧文件删块 + 目标年份文件 addMemo（必要时新建文件）。
-   *     3. 旧位置删除后如果该日期下没别的 memo 了，会触发孤儿日期标题清理。
-   *     4. 旧年份文件如果删空了**保留**（只剩 # YYYY 头），不主动删文件。
-   *     5. 不写入回收站（这是搬移不是删除，避免污染 _trash.md）。
-   *     6. 不做时间冲突检查 —— 同时间多条 memo 是合法状态（用户连发速记时常见）。
-   *
-   *   定位策略与 editMemo 一致：先按原 range 起点，原 range 失效就 fallback 到
-   *   按 (date, time, content) 候选挑 range[0] 最近的那条。 */
+  /** 修改 memo 时间/日期，可同时修改正文。日期变了就搬到对应日记文件。 */
   async editMemoDateTime(
     memo: Memo,
     newDateTime: Date,
@@ -264,31 +241,18 @@ export class MemoStore {
       throw new Error(t("error.originNotFound"));
     }
 
-    // 内容：默认用原内容，调用方可传新内容（例如编辑模式下用户同时改了时间和正文）
     const content = (newContent ?? memo.content).trim();
     if (!content) {
       throw new Error(t("error.emptyContent"));
     }
 
-    // ---- 计算目标参数 ----
-    const newYear = newDateTime.getFullYear().toString();
     const newDate = fmtDate(newDateTime);
     const newTime = fmtTime(newDateTime);
-    const newWeekday = fmtWeekday(newDateTime);
 
-    // 如果年/日/时/分都没变，且内容也没变 → 什么都不做
-    if (
-      newDate === memo.date &&
-      newTime === memo.time &&
-      content === memo.content
-    ) {
+    if (newDate === memo.date && newTime === memo.time && content === memo.content) {
       return;
     }
 
-    // 如果只是时间和内容变了但年/日没变（同一文件、同一日期块） → 走 editMemo + 时间替换的捷径太复杂，
-    // 这里统一走"删除 + 重插"，对所有情况一视同仁，逻辑更可预测。
-
-    // ---- Step 1: 在原文件里精确定位并删除旧块 ----
     const oldRaw = await this.app.vault.read(file);
     const oldLines = oldRaw.split(/\r?\n/);
 
@@ -296,10 +260,7 @@ export class MemoStore {
     const memoHeadRe = new RegExp(`^-\\s+${memo.time}(?:\\s|$)`);
     let s = s0;
     let e = e0;
-    const headOk =
-      s0 >= 0 && s0 < oldLines.length && memoHeadRe.test(oldLines[s0]);
-
-    if (!headOk) {
+    if (!(s0 >= 0 && s0 < oldLines.length && memoHeadRe.test(oldLines[s0]))) {
       const fresh = parseFile(file.path, oldRaw);
       const candidates = fresh.filter(
         (m) =>
@@ -320,9 +281,7 @@ export class MemoStore {
     }
 
     oldLines.splice(s, e - s + 1);
-    this.removeOrphanDateHeaders(oldLines);
 
-    // 压缩连续空行（与 deleteMemo 一致）
     const cleaned: string[] = [];
     let blank = 0;
     for (const ln of oldLines) {
@@ -334,72 +293,102 @@ export class MemoStore {
         cleaned.push(ln);
       }
     }
-    await this.app.vault.modify(file, cleaned.join("\n"));
+    // 删除后文件为空（只剩空行）则直接删文件
+    if (cleaned.every((ln) => ln.trim() === "")) {
+      await this.app.vault.delete(file);
+    } else {
+      await this.app.vault.modify(file, cleaned.join("\n"));
+    }
 
-    // ---- Step 2: 把新内容插入到目标位置 ----
     const folder = normalizePath(this.settings.folder);
     await this.ensureFolder(folder);
-    const newFilePath = `${folder}/${newYear}.md`;
 
-    // 如果是同一年（最常见情况），目标文件就是刚刚 modify 完的那个
-    const sameFile = newFilePath === file.path;
-
-    if (sameFile) {
-      // 重新读一次（因为 Step 1 已经修改了），然后在新日期/时间位置插入
-      const refreshed = await this.app.vault.read(file);
-      const next = this.insertMemoIntoYear(
-        refreshed,
-        newYear,
-        newDate,
-        newWeekday,
-        newTime,
-        content
+    if (this.settings.storageMode === "yearly") {
+      const newYear = newDateTime.getFullYear().toString();
+      const newWeekday = fmtWeekday(newDateTime);
+      const newFilePath = `${folder}/${newYear}.md`;
+      await this.insertIntoTargetYearly(
+        file, newFilePath, cleaned, newYear, newDate, newWeekday, newTime, content
       );
-      await this.app.vault.modify(file, next);
-      await this.reloadFile(file);
     } else {
-      // 跨年：目标文件可能不存在，需要复用 addMemo 的"创建文件 or 插入"逻辑
-      const target = this.app.vault.getAbstractFileByPath(newFilePath) as
-        | TFile
-        | null;
+      const newFilePath = `${folder}/${newDate}.md`;
+      await this.insertIntoTargetDaily(file, newFilePath, cleaned, newTime, content);
+    }
+  }
+
+  private async insertIntoTargetDaily(
+    oldFile: TFile,
+    newFilePath: string,
+    cleaned: string[],
+    newTime: string,
+    content: string
+  ): Promise<void> {
+    const sameFile = newFilePath === oldFile.path;
+    if (sameFile && !cleaned.every((ln) => ln.trim() === "")) {
+      const refreshed = await this.app.vault.read(oldFile);
+      const next = this.insertMemoIntoDay(refreshed, newTime, content);
+      await this.app.vault.modify(oldFile, next);
+      await this.reloadFile(oldFile);
+    } else {
+      const target = this.app.vault.getAbstractFileByPath(newFilePath) as TFile | null;
       if (!target) {
-        const initial =
-          `# ${newYear}\n\n## ${newDate} ${newWeekday}\n\n` +
-          `${renderMemo(newTime, content)}\n\n`;
-        await this.app.vault.create(newFilePath, initial);
+        await this.app.vault.create(newFilePath, renderMemo(newTime, content) + "\n");
       } else {
         const targetRaw = await this.app.vault.read(target);
-        const next = this.insertMemoIntoYear(
-          targetRaw,
-          newYear,
-          newDate,
-          newWeekday,
-          newTime,
-          content
-        );
+        const next = this.insertMemoIntoDay(targetRaw, newTime, content);
         await this.app.vault.modify(target, next);
       }
-      // 两个文件都要 reload（旧文件减少了一条，新文件多了一条）
-      await this.reloadFile(file);
-      const newFile = this.app.vault.getAbstractFileByPath(newFilePath) as
-        | TFile
-        | null;
+      if (oldFile.path !== newFilePath || !sameFile) {
+        if (!cleaned.every((ln) => ln.trim() === "")) {
+          await this.reloadFile(oldFile);
+        }
+      }
+      const newFile = this.app.vault.getAbstractFileByPath(newFilePath) as TFile | null;
       if (newFile) await this.reloadFile(newFile);
     }
   }
 
+  private async insertIntoTargetYearly(
+    oldFile: TFile,
+    newFilePath: string,
+    cleaned: string[],
+    newYear: string,
+    newDate: string,
+    newWeekday: string,
+    newTime: string,
+    content: string
+  ): Promise<void> {
+    const sameFile = newFilePath === oldFile.path;
+    if (sameFile && !cleaned.every((ln) => ln.trim() === "")) {
+      const refreshed = await this.app.vault.read(oldFile);
+      const next = this.insertMemoIntoYear(refreshed, newYear, newDate, newWeekday, newTime, content);
+      await this.app.vault.modify(oldFile, next);
+      await this.reloadFile(oldFile);
+    } else {
+      const target = this.app.vault.getAbstractFileByPath(newFilePath) as TFile | null;
+      if (!target) {
+        const initial = `# ${newYear}\n\n## ${newDate} ${newWeekday}\n\n${renderMemo(newTime, content)}\n\n`;
+        await this.app.vault.create(newFilePath, initial);
+      } else {
+        const targetRaw = await this.app.vault.read(target);
+        const next = this.insertMemoIntoYear(targetRaw, newYear, newDate, newWeekday, newTime, content);
+        await this.app.vault.modify(target, next);
+      }
+      if (oldFile.path !== newFilePath || !sameFile) {
+        if (!cleaned.every((ln) => ln.trim() === "")) {
+          await this.reloadFile(oldFile);
+        }
+      }
+      const newFile = this.app.vault.getAbstractFileByPath(newFilePath) as TFile | null;
+      if (newFile) await this.reloadFile(newFile);
+    }
+  }
 
-  /** 删除 memo（同时清理"孤儿"日期标题：某日下已无 memo 则把日期行也删掉）
-   *
-   *  v1.1.9: 如果 settings.useTrash 为 true，删除前会先把 memo 内容追加到
-   *  `<folder>/_trash.md`，作为软删除。这个 _trash.md 就是普通 md 文件，
-   *  用户可以随时打开查看、手动恢复、或清空。
-   */
+  /** 删除 memo */
   async deleteMemo(memo: Memo): Promise<void> {
     const file = this.app.vault.getAbstractFileByPath(memo.file) as TFile | null;
     if (!file) return;
 
-    // v1.1.9: 先备份到回收站（失败不阻塞删除，只打 console）
     if (this.settings.useTrash) {
       try {
         await this.appendToTrash(memo);
@@ -413,23 +402,34 @@ export class MemoStore {
     const [s, e] = memo.range;
     lines.splice(s, e - s + 1);
 
-    // 清理"孤儿"日期标题：若某个 `## yyyy-MM-dd ...` 下方直到下一个 ## 或 # 之前
-    // 不再有任何 `- HH:MM` 开头的行，说明该日期组已空，把它删掉。
-    this.removeOrphanDateHeaders(lines);
+    const isYearly = this.settings.storageMode === "yearly";
+    if (isYearly) {
+      this.removeOrphanDateHeaders(lines);
+    }
 
-    // 压缩连续空行（最多保留 2 行空白，避免段落过疏）
     const cleaned: string[] = [];
     let blank = 0;
     for (const ln of lines) {
       if (ln.trim() === "") {
         blank++;
-        if (blank <= 2) cleaned.push(ln);
+        if (blank <= (isYearly ? 2 : 1)) cleaned.push(ln);
       } else {
         blank = 0;
         cleaned.push(ln);
       }
     }
-    await this.app.vault.modify(file, cleaned.join("\n"));
+    while (cleaned.length && cleaned[cleaned.length - 1].trim() === "") {
+      cleaned.pop();
+    }
+    while (cleaned.length && cleaned[0].trim() === "") {
+      cleaned.shift();
+    }
+
+    if (cleaned.length === 0) {
+      await this.app.vault.delete(file);
+    } else {
+      await this.app.vault.modify(file, cleaned.join("\n"));
+    }
     await this.reloadFile(file);
   }
 
@@ -631,12 +631,7 @@ export class MemoStore {
     }
   }
 
-  /**
-   * 智能插入一条 memo 到 raw 文本：
-   *  - 没有 "# {year}" 标题则头部加上
-   *  - 已有对应日期分组，插入到该组末尾
-   *  - 没有日期分组，按日期升序新建分组
-   */
+  /** 年模式：将 memo 按时间和日期升序插入到 raw 文本 */
   private insertMemoIntoYear(
     raw: string,
     year: string,
@@ -666,103 +661,92 @@ export class MemoStore {
     if (dateLine >= 0) {
       let end = lines.length;
       for (let i = dateLine + 1; i < lines.length; i++) {
-        if (/^#{1,2}\s+/.test(lines[i])) {
-          end = i;
-          break;
-        }
+        if (/^#{1,2}\s+/.test(lines[i])) { end = i; break; }
       }
-      // v1.6.1: 同日期块内按时间升序找正确插入位置，而不是一律追加到末尾。
-      //   旧行为对 addMemo 没问题（新笔记时间总是当天最晚），
-      //   但 editMemoDateTime 可以把时间改到任意过去时刻，如果还追加到末尾，
-      //   文件里的时间顺序会错乱（23:05 出现在 16:56 前面），Memoria 规范被破坏。
-      //   策略：扫 dateLine+1..end 范围内的 `- HH:MM` 行，找第一个比新时间晚的行，
-      //   插到它之前；都 ≤ 新时间就追加到末尾（和原行为一致）。
       const timeRe = /^-\s+(\d{2}:\d{2})(?:\s|$)/;
       let insertBeforeIdx = -1;
       for (let i = dateLine + 1; i < end; i++) {
         const tm = lines[i].match(timeRe);
-        if (tm && tm[1] > time) {
-          insertBeforeIdx = i;
-          break;
-        }
+        if (tm && tm[1] > time) { insertBeforeIdx = i; break; }
       }
       if (insertBeforeIdx >= 0) {
-        // 向上退回所有前导空行（避免在空行之前插入，造成连续 3 个空行）
         let at = insertBeforeIdx;
-        while (at > dateLine + 1 && lines[at - 1].trim() === "") {
-          at--;
-        }
+        while (at > dateLine + 1 && lines[at - 1].trim() === "") at--;
         lines.splice(at, 0, memoBlock, "");
         return lines.join("\n");
       }
-      // 所有已有 memo 时间都 ≤ 新时间：追加到日期块末尾（保持原行为）
       const insertAt = this.trimTrailingBlank(lines, dateLine + 1, end);
       lines.splice(insertAt, 0, "", memoBlock);
       return lines.join("\n");
     }
 
-    // 新日期分组：在同一年内按日期升序插入
-    // 规则：找到第一个 `## yyyy-MM-dd` 日期 > 当前日期的行，插在它之前；
-    //       都比当前日期小则追加到文件末尾。
-    // v1.1.14: 保险 —— 如果文件里意外有下一个 `# YYYY`（极端场景，如用户手动合并了
-    //   两年内容到同一文件），扫描到下一个年份大标题时立刻停止，避免"穿透"到邻年。
     const allDateRe = /^##\s+(\d{4}-\d{2}-\d{2})/;
     const nextYearRe = /^#\s+\d{4}\s*$/;
     let insertIdx = -1;
     let scanEnd = lines.length;
     for (let i = yearLine + 1; i < lines.length; i++) {
-      if (nextYearRe.test(lines[i])) {
-        scanEnd = i;
-        break;
-      }
+      if (nextYearRe.test(lines[i])) { scanEnd = i; break; }
     }
     for (let i = yearLine + 1; i < scanEnd; i++) {
       const m = lines[i].match(allDateRe);
-      if (m && m[1] > date) {
-        insertIdx = i;
-        break;
-      }
+      if (m && m[1] > date) { insertIdx = i; break; }
     }
 
     if (insertIdx === -1) {
-      // v1.1.14: 如果后面还有下一个 `# YYYY` 段，就把新日期插到当前年段末尾
-      //   （scanEnd 前），而不是整个文件末尾；否则新笔记会跑到下一年后面去。
       if (scanEnd < lines.length) {
-        // 回退到 scanEnd 之前的最后一行非空内容后一行
         let endOfYear = scanEnd;
-        while (endOfYear > yearLine + 1 && lines[endOfYear - 1].trim() === "") {
-          endOfYear--;
-        }
+        while (endOfYear > yearLine + 1 && lines[endOfYear - 1].trim() === "") endOfYear--;
         const block = [dateHeader, "", memoBlock, ""];
         lines.splice(endOfYear, 0, "", ...block);
         return lines.join("\n");
       }
-      // 追加到文件末尾：保证前面有一个空行分隔，本块内容 dateHeader + 空行 + memoBlock
-      // Bug fix (v1.1.2): 之前 block.filter((_, i) => i > 0) 会跳过前导空行但保留结尾空行，
-      //   导致第一次在某年写笔记时，拼接出 "上一段内容##日期" 这样没空行的结构，
-      //   解析器依赖 `## ` 行首识别日期头，会因此导致这条笔记无法被解析/定位错位。
-      // 现在改为：显式确保尾部恰好 1 个空行，然后追加 [dateHeader, "", memoBlock, ""]
       while (lines.length && lines[lines.length - 1].trim() === "") lines.pop();
       lines.push("", dateHeader, "", memoBlock, "");
       return lines.join("\n");
     }
 
-    // 在 insertIdx 前插入：前空行 + 日期头 + 空行 + memo + 空行
     const block = ["", dateHeader, "", memoBlock, ""];
     lines.splice(insertIdx, 0, ...block);
     return lines.join("\n");
   }
 
-  private trimTrailingBlank(
-    lines: string[],
-    from: number,
-    to: number
-  ): number {
+  private trimTrailingBlank(lines: string[], from: number, to: number): number {
     let last = from;
     for (let i = from; i < to; i++) {
       if (lines[i].trim() !== "") last = i + 1;
     }
     return last;
+  }
+
+  /** 日记模式：将 memo 按时间升序插入到 raw 文本 */
+  private insertMemoIntoDay(raw: string, time: string, content: string): string {
+    const lines = raw.split(/\r?\n/);
+    const memoBlock = renderMemo(time, content);
+    const timeRe = /^-\s+(\d{2}:\d{2})(?:\s|$)/;
+    const memoHeadRe = /^-\s+\d{2}:\d{2}/;
+
+    let insertIdx = -1;
+    for (let i = 0; i < lines.length; i++) {
+      const tm = lines[i].match(timeRe);
+      if (tm && tm[1] > time) {
+        // 向上退回前导空行
+        let at = i;
+        while (at > 0 && lines[at - 1].trim() === "") at--;
+        insertIdx = at;
+        break;
+      }
+    }
+
+    if (insertIdx >= 0) {
+      lines.splice(insertIdx, 0, memoBlock, "");
+    } else {
+      // 追加到末尾
+      let last = lines.length;
+      while (last > 0 && lines[last - 1].trim() === "") last--;
+      if (last < lines.length) lines.splice(last);
+      lines.push("", memoBlock);
+    }
+    return lines.join("\n");
   }
 }
 

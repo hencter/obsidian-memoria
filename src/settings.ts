@@ -311,6 +311,21 @@ export class MemoriaSettingTab extends PluginSettingTab {
           })
       );
 
+    // v3.0.0: 存储格式选择（日记 / 年）
+    new Setting(containerEl)
+      .setName(t("settings.storageMode.name"))
+      .setDesc(t("settings.storageMode.desc"))
+      .addDropdown((d) =>
+        d
+          .addOption("daily", t("settings.storageMode.daily"))
+          .addOption("yearly", t("settings.storageMode.yearly"))
+          .setValue(this.plugin.settings.storageMode)
+          .onChange(async (v) => {
+            this.plugin.settings.storageMode = v as "daily" | "yearly";
+            await this.plugin.saveSettings();
+          })
+      );
+
     new Setting(containerEl)
       .setName(t("settings.heading.about"))
       .setHeading();

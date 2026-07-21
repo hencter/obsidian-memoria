@@ -1,113 +1,144 @@
 // ================= Memo 解析器 =================
-// 负责把 YYYY.md 文件解析成 Memo[]，以及把 Memo 序列化回文件
+// 负责把 YYYY-MM-DD.md（日记格式）或 YYYY.md（旧格式）文件解析成 Memo[]
+// 以及把 Memo 序列化回文件
 
 import { Memo, PIN_TAG, STAR_TAG } from "./types";
 
 const WEEKDAY_CN = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
+const DATE_FROM_FILENAME_RE = /[/\\]?(\d{4})-(\d{2})-(\d{2})\.md$/;
+
+export function extractDateFromPath(filePath: string): string | null {
+  const m = filePath.match(DATE_FROM_FILENAME_RE);
+  if (!m) return null;
+  return `${m[1]}-${m[2]}-${m[3]}`;
+}
+
 /**
  * 解析一个 md 文件内容，抽出所有 memo。
  *
- * 识别规则：
- *   ## 2026-04-25 周六      <- 日期分组
+ * 识别规则（新格式 YYYY-MM-DD.md —— 日记格式）：
+ *   文件名即日期，内容直接是 memo 列表：
  *   - 12:43 内容内容        <- 一条 memo
  *     (缩进 2 空格的后续行视作同一条 memo 的多行内容)
+ *
+ * 旧格式（YYYY.md）兼容：
+ *   ## 2026-04-25 周六      <- 日期分组
+ *   - 12:43 内容内容
  */
 export function parseFile(filePath: string, raw: string): Memo[] {
   const lines = raw.split(/\r?\n/);
   const memos: Memo[] = [];
 
-  let currentDate = "";
-  let i = 0;
+  const resolvedDate = extractDateFromPath(filePath);
   const dateHeaderRe = /^##\s+(\d{4}-\d{2}-\d{2})(?:\s+.+)?$/;
   const memoStartRe = /^-\s+(\d{2}:\d{2})\s?(.*)$/;
 
-  while (i < lines.length) {
-    const line = lines[i];
-    const dm = line.match(dateHeaderRe);
-    if (dm) {
-      currentDate = dm[1];
-      i++;
-      continue;
-    }
-    const mm = line.match(memoStartRe);
-    if (mm && currentDate) {
-      const time = mm[1];
-      const firstLine = mm[2] ?? "";
-      const startLine = i;
-      const bodyLines: string[] = [firstLine];
-      i++;
-      // 吸收缩进行（2 空格缩进 或 空行紧跟缩进行）
-      while (i < lines.length) {
-        const next = lines[i];
-        // 遇到下一条 memo 或下一个日期头，停止
-        if (memoStartRe.test(next) || dateHeaderRe.test(next)) break;
-        // 遇到年份大标题也停止
-        if (/^#\s+\d{4}\s*$/.test(next)) break;
-        // 缩进 2 空格的属于本条 memo
-        if (next.startsWith("  ")) {
-          bodyLines.push(next.slice(2));
-          i++;
-          continue;
-        }
-        // 空行：可能是 memo 内部的空行，也可能是 memo 之间的分隔。
-        //   v2.0.17-iter16 修复：原逻辑只 peek(i+1) 一行 —— 用户连续多个空行时
-        //   peek 还是空行，判定为 memo 结束，导致后续内容（即便有缩进）被丢失。
-        //   正确做法：跳过任意多个连续空行，看再之后第一行是否仍是本 memo 的
-        //   缩进行（不能撞到下条 memo / 日期头 / 年份头）。是的话把这些空行
-        //   都纳入 bodyLines；不是则结束。
-        if (next.trim() === "") {
-          let j = i + 1;
-          while (j < lines.length && lines[j].trim() === "") j++;
-          // 跳过所有空行后，j 指向首个非空行（或越界）
-          if (j >= lines.length) break;
-          const peek = lines[j];
-          if (memoStartRe.test(peek) || dateHeaderRe.test(peek)) break;
-          if (/^#\s+\d{4}\s*$/.test(peek)) break;
-          if (peek.startsWith("  ")) {
-            // 把 i..j-1 这段空行全部纳入 body，i 跳到 j
-            for (let k = i; k < j; k++) bodyLines.push("");
-            i = j;
-            continue;
-          }
-          break;
-        }
-        break;
+  if (resolvedDate) {
+    parseFlat(lines, resolvedDate, filePath, memos);
+  } else {
+    let currentDate = "";
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+      const dm = line.match(dateHeaderRe);
+      if (dm) {
+        currentDate = dm[1];
+        i++;
+        continue;
       }
-      const endLine = i - 1;
-      // 去掉前导/尾部空行（兼容 "- HH:MM" 后另起一行的格式）
-      while (bodyLines.length && bodyLines[0].trim() === "") bodyLines.shift();
-      while (bodyLines.length && bodyLines[bodyLines.length - 1].trim() === "")
-        bodyLines.pop();
-      const content = bodyLines.join("\n");
-      const datetime = parseLocalDateTime(currentDate, time);
-      const tags = extractTags(content);
-      const hasImage = detectImage(content);
-      const hasLink = detectLink(content);
-      const isPinned = tags.includes(PIN_TAG);
-      const isStarred = tags.includes(STAR_TAG);
-      // v1.5.0: 任务状态扫描（一次遍历同时得出 open/closed 两个）
-      const tasks = detectTasks(content);
-      memos.push({
-        file: filePath,
-        date: currentDate,
-        time,
-        datetime,
-        content,
-        tags,
-        hasImage,
-        hasLink,
-        isPinned,
-        isStarred,
-        hasOpenTask: tasks.open,
-        hasClosedTask: tasks.closed,
-        range: [startLine, endLine],
-      });
+      const mm = line.match(memoStartRe);
+      if (mm && currentDate) {
+        i = extractMemo(lines, i, mm, currentDate, filePath, memos);
+        continue;
+      }
+      i++;
+    }
+  }
+  return memos;
+}
+
+function parseFlat(lines: string[], date: string, filePath: string, out: Memo[]): void {
+  const memoStartRe = /^-\s+(\d{2}:\d{2})\s?(.*)$/;
+  let i = 0;
+  while (i < lines.length) {
+    const mm = lines[i].match(memoStartRe);
+    if (mm) {
+      i = extractMemo(lines, i, mm, date, filePath, out);
       continue;
     }
     i++;
   }
-  return memos;
+}
+
+function extractMemo(
+  lines: string[],
+  startIdx: number,
+  mm: RegExpMatchArray,
+  currentDate: string,
+  filePath: string,
+  out: Memo[]
+): number {
+  const memoStartRe = /^-\s+(\d{2}:\d{2})\s?(.*)$/;
+  const dateHeaderRe = /^##\s+(\d{4}-\d{2}-\d{2})(?:\s+.+)?$/;
+  const time = mm[1];
+  const firstLine = mm[2] ?? "";
+  const startLine = startIdx;
+  const bodyLines: string[] = [firstLine];
+  let i = startIdx + 1;
+  while (i < lines.length) {
+    const next = lines[i];
+    if (memoStartRe.test(next) || dateHeaderRe.test(next)) break;
+    if (/^#\s+\d{4}\s*$/.test(next)) break;
+    if (next.startsWith("  ")) {
+      bodyLines.push(next.slice(2));
+      i++;
+      continue;
+    }
+    if (next.trim() === "") {
+      let j = i + 1;
+      while (j < lines.length && lines[j].trim() === "") j++;
+      if (j >= lines.length) break;
+      const peek = lines[j];
+      if (memoStartRe.test(peek) || dateHeaderRe.test(peek)) break;
+      if (/^#\s+\d{4}\s*$/.test(peek)) break;
+      if (peek.startsWith("  ")) {
+        for (let k = i; k < j; k++) bodyLines.push("");
+        i = j;
+        continue;
+      }
+      break;
+    }
+    break;
+  }
+  const endLine = i - 1;
+  while (bodyLines.length && bodyLines[0].trim() === "") bodyLines.shift();
+  while (bodyLines.length && bodyLines[bodyLines.length - 1].trim() === "")
+    bodyLines.pop();
+  const content = bodyLines.join("\n");
+  const datetime = parseLocalDateTime(currentDate, time);
+  const tags = extractTags(content);
+  const hasImage = detectImage(content);
+  const hasLink = detectLink(content);
+  const isPinned = tags.includes(PIN_TAG);
+  const isStarred = tags.includes(STAR_TAG);
+  const tasks = detectTasks(content);
+  out.push({
+    file: filePath,
+    date: currentDate,
+    time,
+    datetime,
+    content,
+    tags,
+    hasImage,
+    hasLink,
+    isPinned,
+    isStarred,
+    hasOpenTask: tasks.open,
+    hasClosedTask: tasks.closed,
+    range: [startLine, endLine],
+  });
+  return i;
 }
 
 /** 把 "2026-04-25" + "12:43" 解析成本地 Date */

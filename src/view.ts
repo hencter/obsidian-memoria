@@ -418,12 +418,50 @@ export class MemoriaView extends ItemView {
       if (this.isMobileSidebarLayout()) {
         this.toggleSidebar(!this.contentEl.hasClass("memoria-sidebar-open"));
       } else {
+        // Desktop: toggle collapsed state (manual override)
+        const wasAuto = root.dataset.memoriaAutoCollapsed === "true";
+        if (wasAuto) {
+          delete root.dataset.memoriaAutoCollapsed;
+        }
         this.toggleDesktopSidebar(
           !this.contentEl.hasClass("memoria-sidebar-collapsed")
         );
       }
       syncSidebarToggleIcon();
     });
+
+    // 响应式侧栏：根据容器宽度自动展开/收起
+    const MEDIUM_BREAK = 960;
+    const MOBILE_BREAK = 680;
+    let lastAutoState = false;
+    const resizeObserver = new ResizeObserver(() => {
+      const w = root.clientWidth;
+      const isMobile = w <= MOBILE_BREAK;
+      if (isMobile) {
+        // 移动端：不自动管理（由抽屉 toggle 控制）
+        root.classList.remove("memoria-auto-collapse");
+        return;
+      }
+      const shouldCollapse = w <= MEDIUM_BREAK;
+      root.classList.toggle("memoria-auto-collapse", shouldCollapse);
+      if (shouldCollapse && !lastAutoState) {
+        // Enter medium zone → auto-collapse (only if not manually overridden)
+        if (!root.dataset.memoriaAutoCollapsed) {
+          root.dataset.memoriaAutoCollapsed = "true";
+          this.toggleDesktopSidebar(true);
+        }
+      } else if (!shouldCollapse && lastAutoState) {
+        // Exit medium zone → auto-expand
+        if (root.dataset.memoriaAutoCollapsed === "true") {
+          delete root.dataset.memoriaAutoCollapsed;
+          this.toggleDesktopSidebar(false);
+        }
+      }
+      lastAutoState = shouldCollapse;
+      syncSidebarToggleIcon();
+    });
+    resizeObserver.observe(root);
+    this.register(() => resizeObserver.disconnect());
     this.registerDomEvent(window, "resize", syncSidebarToggleIcon);
 
     // 输入卡片
@@ -3338,7 +3376,6 @@ export class MemoriaView extends ItemView {
           internal.getAttribute("href") ||
           "";
         if (!href) return;
-        // 按住 Ctrl/Cmd 或中键 → 新 tab 打开；否则当前 tab
         const newLeaf =
           (e).ctrlKey ||
           (e).metaKey ||
@@ -3354,8 +3391,6 @@ export class MemoriaView extends ItemView {
         e.stopPropagation();
         const tag = (tagLink.getAttribute("href") || "").replace(/^#/, "");
         if (!tag) return;
-        // 调用 OB 原生 global search 按标签搜索
-        // 等价于用户点侧栏的"全局搜索"然后输入 "tag:#xxx"
         const search = (this.app as unknown as {
           internalPlugins?: {
             getPluginById: (id: string) => {
@@ -3369,14 +3404,88 @@ export class MemoriaView extends ItemView {
         return;
       }
 
-      // 3) 外链 http(s)：交给浏览器 / OB 的外链处理（默认 anchor 行为已 OK）
-      //    不 preventDefault，让 OB 自己处理；但阻止冒泡避免被卡片双击等吃掉
+      // 3) 外链 http(s)：交给浏览器 / OB 的外链处理
       const external = target.closest<HTMLAnchorElement>("a.external-link");
       if (external) {
         e.stopPropagation();
         return;
       }
     });
+
+    // Wiki link hover preview
+    this.bindWikiLinkPreview(body, memo);
+  }
+
+  private bindWikiLinkPreview(body: HTMLElement, memo: Memo): void {
+    let previewEl: HTMLElement | null = null;
+    let hideTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const clearPreview = () => {
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+      if (previewEl) { previewEl.remove(); previewEl = null; }
+    };
+
+    const showPreview = async (link: HTMLAnchorElement) => {
+      clearPreview();
+      const href = link.getAttribute("data-href") || link.getAttribute("href") || "";
+      if (!href) return;
+
+      const file = this.app.metadataCache.getFirstLinkpathDest(href, memo.file);
+      if (!(file instanceof TFile)) return;
+
+      try {
+        const raw = await this.app.vault.cachedRead(file);
+        const firstLines = raw.trim().split("\n").slice(0, 15).join("\n");
+
+        previewEl = activeDocument.body.createDiv({ cls: "memoria-link-preview" });
+
+        const titleEl = previewEl.createDiv({ cls: "memoria-link-preview-title" });
+        titleEl.createSpan({ text: file.basename });
+
+        const contentEl = previewEl.createDiv({ cls: "memoria-link-preview-content" });
+        contentEl.createSpan({ text: firstLines || "(empty)" });
+
+        const rect = link.getBoundingClientRect();
+        let left = rect.left;
+        let top = rect.bottom + 6;
+
+        // Boundary clamping
+        const pw = 320;
+        const vw = activeDocument.documentElement.clientWidth;
+        if (left + pw > vw - 16) left = Math.max(16, vw - pw - 16);
+        if (left < 16) left = 16;
+
+        previewEl.setCssStyles({
+          position: "fixed",
+          left: `${left}px`,
+          top: `${top}px`,
+          maxWidth: `${pw}px`,
+          maxHeight: "320px",
+        });
+
+        previewEl.addEventListener("mouseenter", () => {
+          if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+        });
+        previewEl.addEventListener("mouseleave", () => {
+          hideTimer = setTimeout(clearPreview, 150);
+        });
+      } catch {
+        clearPreview();
+      }
+    };
+
+    body.addEventListener("mouseenter", (e) => {
+      const internal = (e.target as HTMLElement).closest<HTMLAnchorElement>("a.internal-link");
+      if (!internal) return;
+      void showPreview(internal);
+    }, true);
+
+    body.addEventListener("mouseleave", (e) => {
+      const internal = (e.target as HTMLElement).closest<HTMLAnchorElement>("a.internal-link");
+      if (internal) {
+        hideTimer = setTimeout(clearPreview, 200);
+      }
+    }, true);
   }
 
   /**
