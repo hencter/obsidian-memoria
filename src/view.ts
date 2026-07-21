@@ -2885,6 +2885,9 @@ export class MemoriaView extends ItemView {
     const pinnedMemos = visible.filter((m) => m.isPinned);
     const normalMemos = visible.filter((m) => !m.isPinned);
 
+    const waterfall = this.settings.waterfallLayout;
+    this.listEl.toggleClass("memoria-waterfall", waterfall);
+
     // 1) 先渲染"置顶"分组（不分日期，所有置顶一起）
     if (pinnedMemos.length) {
       const pinGroup = this.listEl.createDiv({
@@ -2896,37 +2899,37 @@ export class MemoriaView extends ItemView {
       const pinIcon = pinHead.createSpan({ cls: "memoria-pin-head-icon" });
       setIcon(pinIcon, "pin");
       pinHead.createSpan({ text: t("list.pinnedHead", { n: pinnedMemos.length }) });
-      for (const m of pinnedMemos) this.renderMemoCard(pinGroup, m);
+      for (const m of pinnedMemos) this.renderMemoCard(pinGroup, m, waterfall);
     }
 
-    // 2) 普通笔记按天分组
-    const groups = new Map<string, Memo[]>();
-    for (const m of normalMemos) {
-      const arr = groups.get(m.date) ?? [];
-      arr.push(m);
-      groups.set(m.date, arr);
-    }
+    // 2) 普通笔记：瀑布流模式直接渲染卡片，列表模式按天分组
+    if (waterfall) {
+      for (const m of normalMemos) this.renderMemoCard(this.listEl, m, true);
+    } else {
+      const groups = new Map<string, Memo[]>();
+      for (const m of normalMemos) {
+        const arr = groups.get(m.date) ?? [];
+        arr.push(m);
+        groups.set(m.date, arr);
+      }
 
-    // v1.1.14: 把 today / yesterday 字符串计算移到循环外（原来每个日期组都
-    //   会 new Date() 两次 + fmtDateLocal() 一次，对 600+ 个日期组会产生 1200+ 次冗余对象构造）
-    // v2.0.3: 视图层的周几标签走 i18n（md 文件里依然是中文「周五」不变）
-    const todayStr = fmtDateLocal(new Date());
-    const ydDate = new Date();
-    ydDate.setDate(ydDate.getDate() - 1);
-    const yesterdayStr = fmtDateLocal(ydDate);
+      const todayStr = fmtDateLocal(new Date());
+      const ydDate = new Date();
+      ydDate.setDate(ydDate.getDate() - 1);
+      const yesterdayStr = fmtDateLocal(ydDate);
 
-    for (const [date, list] of groups) {
-      const group = this.listEl.createDiv({ cls: "memoria-day-group" });
-      // v2.0.3: 给分组标记日期 dataset，方便增量追加时识别"是否可合并到这个 group"
-      group.dataset.date = date;
-      const head = group.createDiv({ cls: "memoria-day-head" });
-      const d = new Date(date + "T00:00:00");
-      const wd = t(`weekday.${d.getDay()}`);
-      let label = `${date}  ${wd}`;
-      if (date === todayStr) label = `${t("date.today")}  ${wd}`;
-      else if (date === yesterdayStr) label = `${t("date.yesterday")}  ${wd}`;
-      head.setText(label);
-      for (const m of list) this.renderMemoCard(group, m);
+      for (const [date, list] of groups) {
+        const group = this.listEl.createDiv({ cls: "memoria-day-group" });
+        group.dataset.date = date;
+        const head = group.createDiv({ cls: "memoria-day-head" });
+        const d = new Date(date + "T00:00:00");
+        const wd = t(`weekday.${d.getDay()}`);
+        let label = `${date}  ${wd}`;
+        if (date === todayStr) label = `${t("date.today")}  ${wd}`;
+        else if (date === yesterdayStr) label = `${t("date.yesterday")}  ${wd}`;
+        head.setText(label);
+        for (const m of list) this.renderMemoCard(group, m, false);
+      }
     }
 
     if (this.pageLimit < memos.length) {
@@ -3049,7 +3052,7 @@ export class MemoriaView extends ItemView {
     return `${prefix}${t("list.totalCount", { n })}`;
   }
 
-  private renderMemoCard(parent: HTMLElement, memo: Memo): void {
+  private renderMemoCard(parent: HTMLElement, memo: Memo, waterfall = false): void {
     // v2.0.0: 如果开了情感色彩，给卡片加 mood class（卡片左边色条由 CSS 处理）
     let moodCls = "";
     if (this.settings.enableMoodColoring) {

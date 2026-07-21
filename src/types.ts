@@ -73,6 +73,8 @@ export interface MemoriaSettings {
   mobileInputStyle: "fab" | "always-visible";
   /** v3.0.0: 存储模式。daily = 日记格式 YYYY-MM-DD.md；yearly = 年格式 YYYY.md */
   storageMode: "daily" | "yearly";
+  /** v3.0.0: 瀑布流卡片布局 */
+  waterfallLayout: boolean;
 }
 
 /** v2.1.0: 宠物存档数据（保存在 data.json 里） */
@@ -109,6 +111,7 @@ export const DEFAULT_SETTINGS: MemoriaSettings = {
   buddy: null,
   mobileInputStyle: "fab",
   storageMode: "yearly",
+  waterfallLayout: false,
 };
 
 export const VIEW_TYPE_MEMORIA = "memoria-view";
