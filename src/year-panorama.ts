@@ -13,11 +13,6 @@ function weekdayShort(dow: number): string {
   return t(`year.weekdayShort.${dow}`);
 }
 
-const MONTH_LABELS_EN = [
-  "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
-  "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
-];
-
 export class YearPanoramaView extends ItemView {
   private unsubscribe: (() => void) | null = null;
   private displayYear: number;
@@ -73,44 +68,58 @@ export class YearPanoramaView extends ItemView {
       attr: { "aria-label": t("stats.nav.prevYear") },
     });
     setIcon(prevBtn, "chevron-left");
-    prevBtn.addEventListener("click", () => {
-      this.displayYear--;
-      this.render();
-    });
+    prevBtn.addEventListener("click", () => { this.displayYear--; this.render(); });
 
-    const todayBtn = nav.createEl("button", {
-      cls: "memoria-year-today-btn",
-      text: t("year.thisYear"),
-    });
-    todayBtn.addEventListener("click", () => {
-      this.displayYear = new Date().getFullYear();
-      this.render();
-    });
+    const todayYear = new Date().getFullYear();
+    if (this.displayYear !== todayYear) {
+      const todayBtn = nav.createEl("button", {
+        cls: "memoria-year-today-btn",
+        text: t("year.thisYear"),
+      });
+      todayBtn.addEventListener("click", () => {
+        this.displayYear = todayYear;
+        this.render();
+      });
+    }
 
     const nextBtn = nav.createEl("button", {
       cls: "memoria-year-nav-btn",
       attr: { "aria-label": t("stats.nav.nextYear") },
     });
     setIcon(nextBtn, "chevron-right");
-    nextBtn.addEventListener("click", () => {
-      this.displayYear++;
-      this.render();
-    });
+    nextBtn.addEventListener("click", () => { this.displayYear++; this.render(); });
 
-    // ========== 12 个月网格 ==========
+    // 各月统计
+    const monthlyCounts: number[] = Array(12).fill(0);
+    for (const m of this.store.getAll()) {
+      if (!m.date.startsWith(`${this.displayYear}-`)) continue;
+      const mi = parseInt(m.date.substring(5, 7), 10) - 1;
+      monthlyCounts[mi]++;
+    }
+
     const grid = container.createDiv({ cls: "memoria-year-grid" });
     const today = new Date();
     const todayStr = fmtDate(today);
+    const thisMonth = today.getFullYear() === this.displayYear ? today.getMonth() : -1;
 
     let yearCount = 0;
     for (let month = 0; month < 12; month++) {
-      const monthEl = grid.createDiv({ cls: "memoria-year-month" });
-
-      // 月标签（英文缩写，对齐截图风格）
-      monthEl.createDiv({
-        cls: "memoria-year-month-label",
-        text: MONTH_LABELS_EN[month],
+      const monthEl = grid.createDiv({
+        cls: "memoria-year-month" + (month === thisMonth ? " is-current" : ""),
       });
+
+      // 月份标签行（可点击跳当月首日）
+      const lblRow = monthEl.createDiv({ cls: "memoria-year-month-label" });
+      const mnNum = formatMonth(month, this.displayYear);
+      lblRow.createSpan({ text: t("year.monthName", { m: month + 1 }) });
+      if (monthlyCounts[month] > 0) {
+        const badge = lblRow.createSpan({ cls: "memoria-year-month-count" });
+        badge.setText(String(monthlyCounts[month]));
+      }
+      lblRow.addEventListener("click", () => {
+        void this.jumpToDate(mnNum);
+      });
+      lblRow.setAttr("title", t("year.monthClick"));
 
       // 星期头（v2.0.4: 走 i18n）
       const weekHead = monthEl.createDiv({ cls: "memoria-year-weekhead" });
@@ -226,4 +235,8 @@ function fmtDate(d: Date): string {
   const m = (d.getMonth() + 1).toString().padStart(2, "0");
   const day = d.getDate().toString().padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+function formatMonth(month: number, year: number): string {
+  return `${year}-${(month + 1).toString().padStart(2, "0")}-01`;
 }

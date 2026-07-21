@@ -143,6 +143,8 @@ const zhCN: Dict = {
   "year.weekdayShort.4": "四",
   "year.weekdayShort.5": "五",
   "year.weekdayShort.6": "六",
+  "year.monthClick": "点击查看该月",
+  "year.monthName": "{m}月",
 
   // Notice
   "notice.saved": "✓ 已记下",
@@ -679,6 +681,8 @@ const enUS: Dict = {
   "year.weekdayShort.4": "T",
   "year.weekdayShort.5": "F",
   "year.weekdayShort.6": "S",
+  "year.monthClick": "Click to view this month",
+  "year.monthName": "{m}",
 
   // Notice
   "notice.saved": "✓ Saved",
