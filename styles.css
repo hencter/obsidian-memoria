@@ -1895,20 +1895,22 @@
 .memoria-editor-host {
   margin: 0;
   padding: 0;
-  height: 280px;
-  max-height: 45vh;
-  overflow: hidden;
-  transition: height 0.2s ease;
+  height: 280px !important;
+  max-height: 45vh !important;
+  overflow: hidden !important;
 }
 .memoria-input-card:not(.is-focused):not(.has-content):not(.is-editing):not(.dragging) .memoria-editor-host {
-  height: 56px;
+  height: 56px !important;
 }
 .memoria-input-card.is-focused .memoria-editor-host,
 .memoria-input-card.has-content .memoria-editor-host,
 .memoria-input-card.is-editing .memoria-editor-host {
-  height: 280px;
+  height: 280px !important;
 }
 /* 隐藏编辑器多余的 chrome，保留 CodeMirror 渲染样式 */
+.memoria-editor-host * {
+  max-height: none !important;
+}
 .memoria-editor-host .inline-title {
   display: none !important;
 }
@@ -1921,13 +1923,17 @@
 .memoria-editor-host .cm-panels {
   display: none !important;
 }
-.memoria-editor-host .workspace-leaf-content {
-  padding: 0 !important;
+.memoria-editor-host .workspace-leaf,
+.memoria-editor-host .workspace-leaf-content,
+.memoria-editor-host .markdown-source-view {
   height: 100% !important;
+  max-height: 100% !important;
+  padding: 0 !important;
 }
 .memoria-editor-host .cm-editor {
   background: transparent !important;
   height: 100% !important;
+  max-height: 100% !important;
 }
 .memoria-editor-host .cm-scroller {
   font-family: var(--font-text);
@@ -1939,13 +1945,13 @@
 .memoria-editor-host .cm-sizer {
   padding: 0 !important;
 }
-.memoria-editor-host .cm-contentContainer {
-  overflow: visible !important;
-}
 .memoria-editor-host .cm-content {
   min-height: 0 !important;
-  padding: 0 !important;
+  padding: 0 4px !important;
   padding-bottom: 0 !important;
+}
+.memoria-editor-host .cm-content::after {
+  display: none !important;
 }
 .memoria-editor-host .cm-gutters {
   display: none !important;
