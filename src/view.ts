@@ -89,6 +89,10 @@ export class MemoriaView extends ItemView implements HoverParent {
    *  .is-just-hatched class 播放破壳动画，播完立即清除，
    *  后续切视图不再重播（避免"伪更新"打扰） */
   private buddyJustHatched = false;
+  /** 实时预览面板 */
+  private inputPreviewEl: HTMLElement | null = null;
+  private inputPreviewComponent = new Component();
+  private showInputPreview = false;
   /** 当前是否处于编辑某条 memo 的模式 */
   private editingMemo: Memo | null = null;
   private editBannerEl: HTMLElement | null = null;
@@ -612,6 +616,11 @@ export class MemoriaView extends ItemView implements HoverParent {
     });
     // 标签联想
     this.tagSuggest = new TagSuggest(this.app, this.inputEl);
+    // 实时预览面板
+    this.inputPreviewEl = inputCard.createDiv({
+      cls: "memoria-input-preview memoria-hidden",
+    });
+
     this.inputEl.addEventListener("keydown", (e) => {
       // v2.0.16: 发送快捷键按 sendHotkey 配置决定，含 IME 保护。
       //   前面 contentEl 的 capture 监听已经响应过了；这里是 bubble 阶段兜底
@@ -661,6 +670,7 @@ export class MemoriaView extends ItemView implements HoverParent {
       if (!this.editingMemo) this.saveDraft(this.inputEl.value);
       this.autoResizeInput();
       this.syncInputCardContentState();
+      if (this.showInputPreview) this.updateInputPreview();
       // v2.3.3: 移除上一版的 scrollIntoView（它在 iOS 上每次打字 smooth 滚动
       //   导致界面抖动频闪，还把 ✕ 按钮滚出视口）。FAB 展开态改用 fixed 贴底 +
       //   textarea 内部滚动后，内容变长不再需要滚整个页面，问题从根上消除。
@@ -779,6 +789,19 @@ export class MemoriaView extends ItemView implements HoverParent {
     addTableBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       this.showTablePicker(addTableBtn);
+    });
+
+    // 实时预览切换按钮
+    const previewBtn = toolLeft.createEl("button", {
+      cls: "memoria-tool-btn",
+      attr: { "aria-label": t("toolbar.preview") },
+    });
+    setIcon(previewBtn, "eye");
+    previewBtn.addEventListener("click", () => {
+      this.showInputPreview = !this.showInputPreview;
+      this.inputPreviewEl?.toggleClass("memoria-hidden", !this.showInputPreview);
+      previewBtn.toggleClass("is-active", this.showInputPreview);
+      if (this.showInputPreview) this.updateInputPreview();
     });
 
     // v1.2.1: 去掉 "Ctrl+Enter · 拖拽/粘贴图片" 提示，让输入区更清爽
@@ -1548,6 +1571,27 @@ export class MemoriaView extends ItemView implements HoverParent {
       /* ignore */
     }
   }
+
+  /** 使用 Obsidian 原生 MarkdownRenderer 实时预览输入内容 */
+  private updateInputPreview = debounce(() => {
+    if (!this.inputPreviewEl || !this.showInputPreview) return;
+    this.inputPreviewComponent.unload();
+    this.inputPreviewComponent = new Component();
+    this.inputPreviewComponent.load();
+    this.inputPreviewEl.empty();
+    const md = this.inputEl.value.trim();
+    if (!md) {
+      this.inputPreviewEl.createDiv({ cls: "memoria-input-preview-empty", text: t("preview.empty") });
+      return;
+    }
+    void MarkdownRenderer.render(
+      this.app,
+      md,
+      this.inputPreviewEl,
+      "",
+      this.inputPreviewComponent
+    );
+  }, 200, true);
 
   private isMobileSidebarLayout(): boolean {
     return window.innerWidth <= 680;

@@ -248,6 +248,8 @@ const zhCN: Dict = {
   "toolbar.insertOL": "插入有序列表",
   "toolbar.insertTask": "插入任务列表",
   "toolbar.insertTable": "插入表格",
+  "toolbar.preview": "实时预览",
+  "preview.empty": "开始输入，预览区域将显示渲染效果",
   "toolbar.quote": "引用",
   "toolbar.more": "更多操作",
 
@@ -788,6 +790,8 @@ const enUS: Dict = {
   "toolbar.insertOL": "Insert numbered list",
   "toolbar.insertTask": "Insert task list",
   "toolbar.insertTable": "Insert table",
+  "toolbar.preview": "Live preview",
+  "preview.empty": "Start typing to see rendered preview",
   "toolbar.quote": "Quote",
   "toolbar.more": "More actions",
 
