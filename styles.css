@@ -4742,38 +4742,22 @@
   padding: var(--size-4-1) var(--size-4-3) var(--size-4-6);
   padding-bottom: max(var(--safe-area-inset-bottom), var(--size-4-6));
 }
-.memoria-sidebar-view .memoria-stats {
-  display: flex;
-  justify-content: space-around;
-  padding: 8px 6px 12px;
-}
-.memoria-sidebar-view .memoria-stat-num {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-normal);
-}
-.memoria-sidebar-view .memoria-stat-label {
-  font-size: 10px;
-  color: var(--text-faint);
-}
+/* 内嵌侧栏样式泄漏覆盖 */
 .memoria-sidebar-view .memoria-sidebar-section {
-  padding: 14px 8px 4px;
+  padding: 12px 4px 4px;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-faint);
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
 }
 .memoria-sidebar-view .memoria-nav-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 10px;
-  margin: 1px 0;
-  border-radius: 5px;
+  padding: 4px 6px;
+  margin: 0;
+  border-radius: 4px;
   font-size: 12px;
+  gap: 6px;
   color: var(--text-muted);
-  cursor: pointer;
 }
 .memoria-sidebar-view .memoria-nav-item:hover {
   background: var(--background-modifier-hover);
@@ -4782,13 +4766,14 @@
 .memoria-sidebar-view .memoria-nav-item.active {
   background: var(--interactive-accent);
   color: var(--text-on-accent);
-  font-weight: 500;
+  font-weight: 600;
 }
 .memoria-sidebar-view .memoria-nav-icon {
+  width: 14px;
+  height: 14px;
   display: flex;
   align-items: center;
   opacity: 0.7;
-  flex-shrink: 0;
 }
 .memoria-sidebar-view .memoria-nav-icon .svg-icon {
   width: 14px;
@@ -4797,7 +4782,70 @@
 .memoria-sidebar-view .memoria-nav-count {
   font-size: 10px;
   color: var(--text-faint);
-  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.memoria-sidebar-view .memoria-stats {
+  display: flex;
+  justify-content: space-around;
+  padding: 6px 4px 10px;
+}
+.memoria-sidebar-view .memoria-stat {
+  text-align: center;
+}
+.memoria-sidebar-view .memoria-stat-num {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-normal);
+  line-height: 1.1;
+}
+.memoria-sidebar-view .memoria-stat-label {
+  font-size: 10px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+/* 清除内嵌侧栏的卡片/阴影/边框泄漏 */
+.memoria-sidebar-view .memoria-overview,
+.memoria-sidebar-view .memoria-heatmap,
+.memoria-sidebar-view .memoria-calendar,
+.memoria-sidebar-view .memoria-daily-goal-row {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.memoria-sidebar-view button {
+  box-shadow: none !important;
+  background: transparent !important;
+}
+.memoria-sidebar-view button:hover {
+  background: var(--background-modifier-hover) !important;
+}
+.memoria-sidebar-view .memoria-daily-goal-row {
+  margin: 6px 4px;
+  padding: 0;
+}
+.memoria-sidebar-view .memoria-daily-goal-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--background-modifier-border);
+}
+.memoria-sidebar-view .memoria-section-collapsible {
+  cursor: pointer;
+  user-select: none;
+}
+.memoria-sidebar-view .memoria-section-arrow {
+  display: inline-block;
+  width: 10px;
+  font-size: 10px;
+}
+.memoria-sidebar-view .memoria-heatmap {
+  gap: 2px;
+  padding: 6px 4px;
+}
+.memoria-sidebar-view .memoria-heatmap-col {
+  gap: 2px;
+}
+.memoria-sidebar-view .memoria-heatmap-cell {
+  border-radius: 2px;
 }
 
 
