@@ -2247,8 +2247,6 @@
 .motes-stats-view .mstat-bignum:hover::before {
   opacity: 1;
 }
-  box-shadow: 0 4px 12px -6px color-mix(in srgb, var(--interactive-accent) 40%, transparent);
-}
 .motes-stats-view .mstat-bignum-num {
   /* v1.1.5: 桌面 40px，视觉分量更足 */
   font-size: 36px;
