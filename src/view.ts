@@ -390,67 +390,23 @@ export class MemoriaView extends ItemView implements HoverParent {
     });
     const syncSidebarToggleIcon = () => {
       toggleBtn.empty();
-      if (this.isMobileSidebarLayout()) {
-        setIcon(toggleBtn, "menu");
-      } else {
-        setIcon(
-          toggleBtn,
-          this.contentEl.hasClass("memoria-sidebar-collapsed")
-            ? "panel-left-open"
-            : "panel-left-close"
-        );
-      }
+      setIcon(toggleBtn, "panel-left");
     };
     syncSidebarToggleIcon();
     toggleBtn.addEventListener("click", () => {
-      if (this.isMobileSidebarLayout()) {
-        this.toggleSidebar(!this.contentEl.hasClass("memoria-sidebar-open"));
-      } else {
-        // Desktop: toggle collapsed state (manual override)
-        const wasAuto = root.dataset.memoriaAutoCollapsed === "true";
-        if (wasAuto) {
-          delete root.dataset.memoriaAutoCollapsed;
+      void (async () => {
+        const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMORIA_SIDEBAR);
+        if (leaves.length) {
+          // toggle: close if open
+          leaves[0].detach();
+        } else {
+          const leaf = this.app.workspace.getRightLeaf(false);
+          if (leaf) {
+            await leaf.setViewState({ type: VIEW_TYPE_MEMORIA_SIDEBAR, active: true });
+          }
         }
-        this.toggleDesktopSidebar(
-          !this.contentEl.hasClass("memoria-sidebar-collapsed")
-        );
-      }
-      syncSidebarToggleIcon();
+      })();
     });
-
-    // 响应式侧栏：根据容器宽度自动展开/收起
-    const MEDIUM_BREAK = 960;
-    const MOBILE_BREAK = 680;
-    let lastAutoState = false;
-    const resizeObserver = new ResizeObserver(() => {
-      const w = root.clientWidth;
-      const isMobile = w <= MOBILE_BREAK;
-      if (isMobile) {
-        // 移动端：不自动管理（由抽屉 toggle 控制）
-        root.classList.remove("memoria-auto-collapse");
-        return;
-      }
-      const shouldCollapse = w <= MEDIUM_BREAK;
-      root.classList.toggle("memoria-auto-collapse", shouldCollapse);
-      if (shouldCollapse && !lastAutoState) {
-        // Enter medium zone → auto-collapse (only if not manually overridden)
-        if (!root.dataset.memoriaAutoCollapsed) {
-          root.dataset.memoriaAutoCollapsed = "true";
-          this.toggleDesktopSidebar(true);
-        }
-      } else if (!shouldCollapse && lastAutoState) {
-        // Exit medium zone → auto-expand
-        if (root.dataset.memoriaAutoCollapsed === "true") {
-          delete root.dataset.memoriaAutoCollapsed;
-          this.toggleDesktopSidebar(false);
-        }
-      }
-      lastAutoState = shouldCollapse;
-      syncSidebarToggleIcon();
-    });
-    resizeObserver.observe(root);
-    this.register(() => resizeObserver.disconnect());
-    this.registerDomEvent(window, "resize", syncSidebarToggleIcon);
 
     // 输入卡片
     this.buildInputCard(main);
@@ -1717,16 +1673,8 @@ export class MemoriaView extends ItemView implements HoverParent {
 
   private renderAll(): void {
     this.syncFabMode();
-    // Push local filter to shared state (independent sidebar reads from shared)
-    setFilter({ ...this.filter });
-    // Skip inline sidebar if standalone sidebar view is open
-    const hasStandaloneSidebar = this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMORIA_SIDEBAR).length > 0;
-    if (!hasStandaloneSidebar) {
-      this.sidebarEl.style.display = "";
-      this.renderSidebar();
-    } else {
-      this.sidebarEl.style.display = "none";
-    }
+    // 侧栏已拆分为独立 leaf（MemoriaSidebarView），不再内嵌渲染
+    this.sidebarEl.style.display = "none";
     this.renderList();
   }
 
