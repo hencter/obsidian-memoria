@@ -75,6 +75,8 @@ export interface MemoriaSettings {
   storageMode: "daily" | "yearly";
   /** v3.0.0: 瀑布流卡片布局 */
   waterfallLayout: boolean;
+  /** v3.0.0: 编辑器初始高度 (px) */
+  editorHeight: number;
 }
 
 /** v2.1.0: 宠物存档数据（保存在 data.json 里） */
@@ -112,6 +114,7 @@ export const DEFAULT_SETTINGS: MemoriaSettings = {
   mobileInputStyle: "fab",
   storageMode: "yearly",
   waterfallLayout: false,
+  editorHeight: 200,
 };
 
 export const VIEW_TYPE_MEMORIA = "memoria-view";

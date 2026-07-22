@@ -329,12 +329,26 @@ export class MemoriaSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName(t("settings.waterfall.name"))
       .setDesc(t("settings.waterfall.desc"))
-      .addToggle((tg) =>
+          .addToggle((tg) =>
         tg.setValue(this.plugin.settings.waterfallLayout).onChange(async (v) => {
           this.plugin.settings.waterfallLayout = v;
           await this.plugin.saveSettings();
           this.plugin.store.notifyChange();
         })
+      );
+
+    new Setting(containerEl)
+      .setName(t("settings.editorHeight.name"))
+      .setDesc(t("settings.editorHeight.desc"))
+      .addSlider((s) =>
+        s
+          .setLimits(60, 600, 20)
+          .setValue(this.plugin.settings.editorHeight)
+          .setDynamicTooltip()
+          .onChange(async (v) => {
+            this.plugin.settings.editorHeight = v;
+            await this.plugin.saveSettings();
+          })
       );
 
     new Setting(containerEl)

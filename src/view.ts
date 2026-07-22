@@ -611,7 +611,7 @@ export class MemoriaView extends ItemView implements HoverParent {
             const cmContent = this.editorHostEl?.querySelector(".cm-content") as HTMLElement | null;
             if (!cmContent) return;
             const h = cmContent.scrollHeight;
-            const minH = 80;
+            const minH = this.settings.editorHeight || 200;
             const maxH = Math.min(window.innerHeight * 0.55, 600);
             const target = Math.max(minH, Math.min(h + 12, maxH));
             this.editorHostEl.style.height = `${target}px`;
