@@ -228,7 +228,7 @@ export default class MemoriaPlugin extends Plugin {
       await this.app.workspace.revealLeaf(existing[0]);
       return;
     }
-    const leaf = this.app.workspace.getRightLeaf(false);
+    const leaf = this.app.workspace.getLeftLeaf(false);
     if (leaf) {
       await leaf.setViewState({ type: VIEW_TYPE_MEMORIA_SIDEBAR, active: true });
       await this.app.workspace.revealLeaf(leaf);
