@@ -1918,6 +1918,7 @@
 .memoria-editor-host .view-header-nav-buttons,
 .memoria-editor-host .view-header-title-container {
   display: none !important;
+  visibility: hidden !important;
 }
 .memoria-editor-host .metadata-container,
 .memoria-editor-host .cm-panels {
