@@ -120,10 +120,10 @@ export const DEFAULT_SETTINGS: MotesSettings = {
   brandName: "Motes",
 };
 
-export const VIEW_TYPE_Motes = "Motes-view";
-export const VIEW_TYPE_Motes_STATS = "Motes-stats-view";
-export const VIEW_TYPE_Motes_YEAR = "Motes-year-view";
-export const VIEW_TYPE_Motes_SIDEBAR = "Motes-sidebar-view";
+export const VIEW_TYPE_Motes = "motes-view";
+export const VIEW_TYPE_MOTES_STATS = "motes-stats-view";
+export const VIEW_TYPE_MOTES_YEAR = "motes-year-view";
+export const VIEW_TYPE_MOTES_SIDEBAR = "motes-sidebar-view";
 
 /** 保留标签：这些标签不会在侧栏的标签列表里显示，也不会出现在卡片底部胶囊 */
 export const PIN_TAG = "置顶";

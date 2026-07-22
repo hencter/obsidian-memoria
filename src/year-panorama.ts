@@ -4,7 +4,7 @@
 
 import { ItemView, WorkspaceLeaf, setIcon } from "obsidian";
 import { MemoStore } from "./store";
-import { VIEW_TYPE_Motes_YEAR, VIEW_TYPE_Motes } from "./types";
+import { VIEW_TYPE_MOTES_YEAR, VIEW_TYPE_Motes } from "./types";
 import { MotesView } from "./view";
 import { t } from "./i18n";
 
@@ -23,7 +23,7 @@ export class YearPanoramaView extends ItemView {
   }
 
   getViewType(): string {
-    return VIEW_TYPE_Motes_YEAR;
+    return VIEW_TYPE_MOTES_YEAR;
   }
   getDisplayText(): string {
     return t("year.viewTitle");
@@ -47,7 +47,7 @@ export class YearPanoramaView extends ItemView {
   private render(): void {
     const container = this.contentEl;
     container.empty();
-    container.addClass("Motes-year-view");
+    container.addClass("motes-year-view");
 
     // 统计每天笔记数
     const dayMap = new Map<string, number>();
@@ -56,15 +56,15 @@ export class YearPanoramaView extends ItemView {
     }
 
     // ========== 顶栏：年份（左） + 切换（右） ==========
-    const header = container.createDiv({ cls: "Motes-year-header" });
+    const header = container.createDiv({ cls: "motes-year-header" });
     header.createDiv({
-      cls: "Motes-year-title",
+      cls: "motes-year-title",
       text: String(this.displayYear),
     });
 
-    const nav = header.createDiv({ cls: "Motes-year-nav" });
+    const nav = header.createDiv({ cls: "motes-year-nav" });
     const prevBtn = nav.createEl("button", {
-      cls: "Motes-year-nav-btn",
+      cls: "motes-year-nav-btn",
       attr: { "aria-label": t("stats.nav.prevYear") },
     });
     setIcon(prevBtn, "chevron-left");
@@ -73,7 +73,7 @@ export class YearPanoramaView extends ItemView {
     const todayYear = new Date().getFullYear();
     if (this.displayYear !== todayYear) {
       const todayBtn = nav.createEl("button", {
-        cls: "Motes-year-today-btn",
+        cls: "motes-year-today-btn",
         text: t("year.thisYear"),
       });
       todayBtn.addEventListener("click", () => {
@@ -83,7 +83,7 @@ export class YearPanoramaView extends ItemView {
     }
 
     const nextBtn = nav.createEl("button", {
-      cls: "Motes-year-nav-btn",
+      cls: "motes-year-nav-btn",
       attr: { "aria-label": t("stats.nav.nextYear") },
     });
     setIcon(nextBtn, "chevron-right");
@@ -97,7 +97,7 @@ export class YearPanoramaView extends ItemView {
       monthlyCounts[mi]++;
     }
 
-    const grid = container.createDiv({ cls: "Motes-year-grid" });
+    const grid = container.createDiv({ cls: "motes-year-grid" });
     const today = new Date();
     const todayStr = fmtDate(today);
     const thisMonth = today.getFullYear() === this.displayYear ? today.getMonth() : -1;
@@ -105,15 +105,15 @@ export class YearPanoramaView extends ItemView {
     let yearCount = 0;
     for (let month = 0; month < 12; month++) {
       const monthEl = grid.createDiv({
-        cls: "Motes-year-month" + (month === thisMonth ? " is-current" : ""),
+        cls: "motes-year-month" + (month === thisMonth ? " is-current" : ""),
       });
 
       // 月份标签行（可点击跳当月首日）
-      const lblRow = monthEl.createDiv({ cls: "Motes-year-month-label" });
+      const lblRow = monthEl.createDiv({ cls: "motes-year-month-label" });
       const mnNum = formatMonth(month, this.displayYear);
       lblRow.createSpan({ text: t("year.monthName", { m: month + 1 }) });
       if (monthlyCounts[month] > 0) {
-        const badge = lblRow.createSpan({ cls: "Motes-year-month-count" });
+        const badge = lblRow.createSpan({ cls: "motes-year-month-count" });
         badge.setText(String(monthlyCounts[month]));
       }
       lblRow.addEventListener("click", () => {
@@ -122,13 +122,13 @@ export class YearPanoramaView extends ItemView {
       lblRow.setAttr("title", t("year.monthClick"));
 
       // 星期头（v2.0.4: 走 i18n）
-      const weekHead = monthEl.createDiv({ cls: "Motes-year-weekhead" });
+      const weekHead = monthEl.createDiv({ cls: "motes-year-weekhead" });
       for (let i = 0; i < 7; i++) {
-        weekHead.createDiv({ cls: "Motes-year-wday", text: weekdayShort(i) });
+        weekHead.createDiv({ cls: "motes-year-wday", text: weekdayShort(i) });
       }
 
       // 日期网格：显示整个 6 周网格（含上月尾 & 下月头，颜色灰显）
-      const cal = monthEl.createDiv({ cls: "Motes-year-grid-days" });
+      const cal = monthEl.createDiv({ cls: "motes-year-grid-days" });
       const firstDayOfMonth = new Date(this.displayYear, month, 1);
       const startDow = firstDayOfMonth.getDay(); // 0=日
       const daysInMonth = new Date(
@@ -172,7 +172,7 @@ export class YearPanoramaView extends ItemView {
 
         const cell = cal.createDiv({
           cls:
-            "Motes-year-day" +
+            "motes-year-day" +
             (isOut ? " is-out" : "") +
             (!isOut && count > 0 ? " has-memo" : "") +
             levelCls +
@@ -191,17 +191,17 @@ export class YearPanoramaView extends ItemView {
     }
 
     // ========== 底部：年度小统计 ==========
-    const foot = container.createDiv({ cls: "Motes-year-foot" });
+    const foot = container.createDiv({ cls: "motes-year-foot" });
     const activeDays = Array.from(dayMap.keys()).filter((d) =>
       d.startsWith(String(this.displayYear) + "-")
     ).length;
     foot.createSpan({
-      cls: "Motes-year-foot-item",
+      cls: "motes-year-foot-item",
       text: t("year.yearSum", { year: this.displayYear, n: yearCount }),
     });
-    foot.createSpan({ cls: "Motes-year-foot-sep", text: "·" });
+    foot.createSpan({ cls: "motes-year-foot-sep", text: "·" });
     foot.createSpan({
-      cls: "Motes-year-foot-item",
+      cls: "motes-year-foot-item",
       text: t("year.activeDays", { n: activeDays }),
     });
   }

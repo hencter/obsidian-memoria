@@ -10,9 +10,9 @@ import {
   DEFAULT_SETTINGS,
   MotesSettings,
   VIEW_TYPE_Motes,
-  VIEW_TYPE_Motes_STATS,
-  VIEW_TYPE_Motes_YEAR,
-  VIEW_TYPE_Motes_SIDEBAR,
+  VIEW_TYPE_MOTES_STATS,
+  VIEW_TYPE_MOTES_YEAR,
+  VIEW_TYPE_MOTES_SIDEBAR,
 } from "./types";
 import { MemoStore } from "./store";
 import { renderMemo } from "./parser";
@@ -41,15 +41,15 @@ export default class MotesPlugin extends Plugin {
       (leaf: WorkspaceLeaf) => new MotesView(leaf, this.store, this.settings, this)
     );
     this.registerView(
-      VIEW_TYPE_Motes_SIDEBAR,
+      VIEW_TYPE_MOTES_SIDEBAR,
       (leaf: WorkspaceLeaf) => new MotesSidebarView(leaf, this.store, this.settings, this)
     );
     this.registerView(
-      VIEW_TYPE_Motes_STATS,
+      VIEW_TYPE_MOTES_STATS,
       (leaf: WorkspaceLeaf) => new StatsView(leaf, this.store)
     );
     this.registerView(
-      VIEW_TYPE_Motes_YEAR,
+      VIEW_TYPE_MOTES_YEAR,
       (leaf: WorkspaceLeaf) => new YearPanoramaView(leaf, this.store)
     );
 
@@ -94,7 +94,7 @@ export default class MotesPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "Motes-quick-capture",
+      id: "motes-quick-capture",
       name: t("command.quickCapture"),
       callback: () => {
         void this.quickCapture();
@@ -102,7 +102,7 @@ export default class MotesPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "Motes-normalize-all",
+      id: "motes-normalize-all",
       name: t("command.normalizeAll"),
       callback: () => {
         void this.normalizeAll();
@@ -110,7 +110,7 @@ export default class MotesPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "Motes-migrate-daily-to-yearly",
+      id: "motes-migrate-daily-to-yearly",
       name: t("command.migrateDailyToYearly"),
       callback: () => {
         void this.migrateDailyToYearly();
@@ -192,7 +192,7 @@ export default class MotesPlugin extends Plugin {
 
   async activateStatsView(): Promise<void> {
     const existing = this.app.workspace.getLeavesOfType(
-      VIEW_TYPE_Motes_STATS
+      VIEW_TYPE_MOTES_STATS
     );
     if (existing.length) {
       await this.app.workspace.revealLeaf(existing[0]);
@@ -200,7 +200,7 @@ export default class MotesPlugin extends Plugin {
     }
     const leaf = this.app.workspace.getLeaf("tab");
     await leaf.setViewState({
-      type: VIEW_TYPE_Motes_STATS,
+      type: VIEW_TYPE_MOTES_STATS,
       active: true,
     });
     await this.app.workspace.revealLeaf(leaf);
@@ -208,7 +208,7 @@ export default class MotesPlugin extends Plugin {
 
   async activateYearView(): Promise<void> {
     const existing = this.app.workspace.getLeavesOfType(
-      VIEW_TYPE_Motes_YEAR
+      VIEW_TYPE_MOTES_YEAR
     );
     if (existing.length) {
       await this.app.workspace.revealLeaf(existing[0]);
@@ -216,21 +216,21 @@ export default class MotesPlugin extends Plugin {
     }
     const leaf = this.app.workspace.getLeaf("tab");
     await leaf.setViewState({
-      type: VIEW_TYPE_Motes_YEAR,
+      type: VIEW_TYPE_MOTES_YEAR,
       active: true,
     });
     await this.app.workspace.revealLeaf(leaf);
   }
 
   async activateSidebarView(): Promise<void> {
-    const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_Motes_SIDEBAR);
+    const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_MOTES_SIDEBAR);
     if (existing.length) {
       await this.app.workspace.revealLeaf(existing[0]);
       return;
     }
     const leaf = this.app.workspace.getLeftLeaf(false);
     if (leaf) {
-      await leaf.setViewState({ type: VIEW_TYPE_Motes_SIDEBAR, active: true });
+      await leaf.setViewState({ type: VIEW_TYPE_MOTES_SIDEBAR, active: true });
       await this.app.workspace.revealLeaf(leaf);
     }
   }
@@ -285,11 +285,11 @@ export default class MotesPlugin extends Plugin {
   private confirmAsync(message: string): Promise<boolean> {
     return new Promise((resolve) => {
       const backdrop = activeDocument.body.createDiv({
-        cls: "Motes-modal-backdrop",
+        cls: "motes-modal-backdrop",
       });
-      const box = backdrop.createDiv({ cls: "Motes-modal Motes-confirm" });
-      box.createDiv({ cls: "Motes-modal-title", text: message });
-      const btns = box.createDiv({ cls: "Motes-modal-btns" });
+      const box = backdrop.createDiv({ cls: "motes-modal Motes-confirm" });
+      box.createDiv({ cls: "motes-modal-title", text: message });
+      const btns = box.createDiv({ cls: "motes-modal-btns" });
       const cancel = btns.createEl("button", { text: t("input.cancel") });
       const ok = btns.createEl("button", {
         text: t("notice.confirmContinue"),
@@ -336,17 +336,17 @@ export default class MotesPlugin extends Plugin {
     }
 
     const backdrop = activeDocument.createElement("div");
-    backdrop.addClass("Motes-modal-backdrop");
-    const box = backdrop.createDiv({ cls: "Motes-modal" });
+    backdrop.addClass("motes-modal-backdrop");
+    const box = backdrop.createDiv({ cls: "motes-modal" });
     box.createDiv({
-      cls: "Motes-modal-title",
+      cls: "motes-modal-title",
       text: t("quickCapture.title"),
     });
     const ta = box.createEl("textarea", {
-      cls: "Motes-modal-textarea",
+      cls: "motes-modal-textarea",
       attr: { placeholder: t("quickCapture.placeholder") },
     });
-    const btnRow = box.createDiv({ cls: "Motes-modal-btns" });
+    const btnRow = box.createDiv({ cls: "motes-modal-btns" });
     const cancel = btnRow.createEl("button", { text: t("quickCapture.cancel") });
     const save = btnRow.createEl("button", {
       text: t("quickCapture.send"),

@@ -8,7 +8,7 @@ import {
   Notice,
   Platform,
 } from "obsidian";
-import { Memo, MotesSettings, RESERVED_TAGS, VIEW_TYPE_Motes_SIDEBAR } from "./types";
+import { Memo, MotesSettings, RESERVED_TAGS, VIEW_TYPE_MOTES_SIDEBAR } from "./types";
 import { MemoStore } from "./store";
 import { fmtDate } from "./parser";
 import { renderCalendar } from "./calendar";
@@ -38,7 +38,7 @@ export class MotesSidebarView extends ItemView {
     this.overviewMode = this.settings.defaultOverviewMode || "heatmap";
   }
 
-  getViewType(): string { return VIEW_TYPE_Motes_SIDEBAR; }
+  getViewType(): string { return VIEW_TYPE_MOTES_SIDEBAR; }
   getDisplayText(): string { return t("sidebar.viewTitle"); }
   getIcon(): string { return "panel-left"; }
 
@@ -90,7 +90,7 @@ export class MotesSidebarView extends ItemView {
       if (effective.length === 0) noTagCount++;
     }
 
-    const stats = this.contentEl.createDiv({ cls: "Motes-stats" });
+    const stats = this.contentEl.createDiv({ cls: "motes-stats" });
     this.renderStatItem(stats, memos.length.toString(), t("stats.memos"));
     this.renderStatItem(stats, tagSet.size.toString(), t("stats.tags"));
     this.renderStatItem(stats, daySet.size.toString(), t("stats.days"));
@@ -100,7 +100,7 @@ export class MotesSidebarView extends ItemView {
     this.renderDailyGoal(this.contentEl, memos);
 
     // 视图区
-    this.contentEl.createDiv({ cls: "Motes-sidebar-section", text: t("sidebar.section.views") });
+    this.contentEl.createDiv({ cls: "motes-sidebar-section", text: t("sidebar.section.views") });
     const presets: Array<{ key: Filter["preset"]; icon: string; text: string; count?: number }> = [
       { key: "all", icon: "layout-grid", text: t("sidebar.all"), count: memos.length },
       { key: "pinned", icon: "pin", text: t("sidebar.pinned"), count: pinnedCount },
@@ -113,7 +113,7 @@ export class MotesSidebarView extends ItemView {
     for (const p of presets) this.renderNavItem(p, filter);
 
     // 检索式
-    this.contentEl.createDiv({ cls: "Motes-sidebar-section", text: t("sidebar.section.search") });
+    this.contentEl.createDiv({ cls: "motes-sidebar-section", text: t("sidebar.section.search") });
     this.renderNavItem({ key: "no-tag", icon: "tag", text: t("sidebar.noTag"), count: noTagCount }, filter);
     this.renderNavItem({ key: "with-image", icon: "image", text: t("sidebar.withImage"), count: imageCount }, filter);
     this.renderNavItem({ key: "with-link", icon: "link", text: t("sidebar.withLink"), count: linkCount }, filter);
@@ -122,14 +122,14 @@ export class MotesSidebarView extends ItemView {
     const yearCount = new Map<string, number>();
     for (const m of memos) yearCount.set(m.date.substring(0, 4), (yearCount.get(m.date.substring(0, 4)) ?? 0) + 1);
     if (this.settings.showSidebarYears && yearCount.size) {
-      this.contentEl.createDiv({ cls: "Motes-sidebar-section", text: t("sidebar.section.years") });
+      this.contentEl.createDiv({ cls: "motes-sidebar-section", text: t("sidebar.section.years") });
       const years = [...yearCount.entries()].sort((a, b) => a[0] < b[0] ? 1 : -1);
       for (const [y, c] of years) {
-        const el = this.contentEl.createDiv({ cls: "Motes-nav-item" + (filter.year === y ? " active" : "") });
-        const icon = el.createDiv({ cls: "Motes-nav-icon" });
+        const el = this.contentEl.createDiv({ cls: "motes-nav-item" + (filter.year === y ? " active" : "") });
+        const icon = el.createDiv({ cls: "motes-nav-icon" });
         setIcon(icon, "calendar");
-        el.createSpan({ cls: "Motes-nav-text", text: y });
-        el.createSpan({ cls: "Motes-nav-count", text: String(c) });
+        el.createSpan({ cls: "motes-nav-text", text: y });
+        el.createSpan({ cls: "motes-nav-count", text: String(c) });
         el.addEventListener("click", () => {
           setFilter({ year: filter.year === y ? null : y, preset: "all" });
         });
@@ -144,8 +144,8 @@ export class MotesSidebarView extends ItemView {
         tagCount.set(t, (tagCount.get(t) ?? 0) + 1);
       }
       if (tagCount.size) {
-        const sectionHead = this.contentEl.createDiv({ cls: "Motes-sidebar-section Motes-section-collapsible" });
-        sectionHead.createSpan({ cls: "Motes-section-arrow", text: this.tagsExpanded ? "\u25BE" : "\u25B8" });
+        const sectionHead = this.contentEl.createDiv({ cls: "motes-sidebar-section Motes-section-collapsible" });
+        sectionHead.createSpan({ cls: "motes-section-arrow", text: this.tagsExpanded ? "\u25BE" : "\u25B8" });
         sectionHead.createSpan({ text: ` ${t("sidebar.section.tags")} (${tagCount.size})` });
         sectionHead.addEventListener("click", () => {
           this.tagsExpanded = !this.tagsExpanded;
@@ -160,18 +160,18 @@ export class MotesSidebarView extends ItemView {
   }
 
   private renderStatItem(parent: HTMLElement, num: string, label: string): void {
-    const item = parent.createDiv({ cls: "Motes-stat" });
-    item.createDiv({ cls: "Motes-stat-num", text: num });
-    item.createDiv({ cls: "Motes-stat-label", text: label });
+    const item = parent.createDiv({ cls: "motes-stat" });
+    item.createDiv({ cls: "motes-stat-num", text: num });
+    item.createDiv({ cls: "motes-stat-label", text: label });
   }
 
   private renderNavItem(p: { key: Filter["preset"]; icon: string; text: string; count?: number }, filter: Filter): void {
     const isActive = filter.preset === p.key && !filter.tag && !filter.year;
-    const el = this.contentEl.createDiv({ cls: "Motes-nav-item" + (isActive ? " active" : "") });
-    const iconEl = el.createDiv({ cls: "Motes-nav-icon" });
+    const el = this.contentEl.createDiv({ cls: "motes-nav-item" + (isActive ? " active" : "") });
+    const iconEl = el.createDiv({ cls: "motes-nav-icon" });
     setIcon(iconEl, p.icon);
-    el.createSpan({ cls: "Motes-nav-text", text: p.text });
-    if (p.count !== undefined) el.createSpan({ cls: "Motes-nav-count", text: String(p.count) });
+    el.createSpan({ cls: "motes-nav-text", text: p.text });
+    if (p.count !== undefined) el.createSpan({ cls: "motes-nav-count", text: String(p.count) });
     el.addEventListener("click", () => {
       setFilter({ preset: p.key, tag: null, year: null, date: null, randomSeed: p.key === "random" ? Date.now() : undefined });
     });
@@ -182,8 +182,8 @@ export class MotesSidebarView extends ItemView {
     if (!this.overviewModeOverridden) {
       this.overviewMode = this.settings.defaultOverviewMode || "heatmap";
     }
-    const wrap = parent.createDiv({ cls: "Motes-overview" });
-    const content = wrap.createDiv({ cls: "Motes-overview-content" });
+    const wrap = parent.createDiv({ cls: "motes-overview" });
+    const content = wrap.createDiv({ cls: "motes-overview-content" });
     if (this.overviewMode === "heatmap") {
       this.renderHeatmap(content, memos);
     } else if (this.overviewMode === "calendar") {
@@ -205,9 +205,9 @@ export class MotesSidebarView extends ItemView {
     const startSunday = new Date(endSunday); startSunday.setDate(endSunday.getDate() - (weeks - 1) * 7);
     const dayMap = new Map<string, number>();
     for (const m of memos) dayMap.set(m.date, (dayMap.get(m.date) ?? 0) + 1);
-    const grid = parent.createDiv({ cls: "Motes-heatmap" });
+    const grid = parent.createDiv({ cls: "motes-heatmap" });
     for (let w = 0; w < weeks; w++) {
-      const col = grid.createDiv({ cls: "Motes-heatmap-col" });
+      const col = grid.createDiv({ cls: "motes-heatmap-col" });
       for (let d = 0; d < 7; d++) {
         const day = new Date(startSunday); day.setDate(startSunday.getDate() + w * 7 + d);
         const key = fmtDate(day);
@@ -239,18 +239,18 @@ export class MotesSidebarView extends ItemView {
       : t("list.dailyGoalDone", { goal, done: todayCount });
 
     const row = parent.createDiv({ cls: `Motes-daily-goal-row${isDone ? " is-done" : ""}` });
-    const barWrap = row.createDiv({ cls: "Motes-daily-goal", attr: { "aria-label": goalTooltip } });
+    const barWrap = row.createDiv({ cls: "motes-daily-goal", attr: { "aria-label": goalTooltip } });
     barWrap.addEventListener("click", () => { setFilter({ preset: "today", tag: null, date: null }); });
-    const bar = barWrap.createDiv({ cls: "Motes-daily-goal-bar" });
-    bar.createDiv({ cls: "Motes-daily-goal-fill" }).style.width = `${pct}%`;
+    const bar = barWrap.createDiv({ cls: "motes-daily-goal-bar" });
+    bar.createDiv({ cls: "motes-daily-goal-fill" }).style.width = `${pct}%`;
 
-    const actions = row.createDiv({ cls: "Motes-daily-goal-actions" });
-    const targetBtn = actions.createEl("button", { cls: "Motes-icon-btn Motes-daily-goal-target", attr: { "aria-label": goalTooltip } });
+    const actions = row.createDiv({ cls: "motes-daily-goal-actions" });
+    const targetBtn = actions.createEl("button", { cls: "motes-icon-btn Motes-daily-goal-target", attr: { "aria-label": goalTooltip } });
     setIcon(targetBtn, "crosshair");
 
     const nextMode: "heatmap" | "calendar" | "buddy" = this.overviewMode === "heatmap" ? "calendar" : this.overviewMode === "calendar" ? "buddy" : "heatmap";
     const nextIcon = nextMode === "calendar" ? "calendar" : nextMode === "buddy" ? "paw-print" : "activity";
-    const switchBtn = actions.createEl("button", { cls: "Motes-icon-btn Motes-daily-goal-switch", attr: { "aria-label": t(`toolbar.to${nextMode.charAt(0).toUpperCase() + nextMode.slice(1)}`) } });
+    const switchBtn = actions.createEl("button", { cls: "motes-icon-btn Motes-daily-goal-switch", attr: { "aria-label": t(`toolbar.to${nextMode.charAt(0).toUpperCase() + nextMode.slice(1)}`) } });
     setIcon(switchBtn, nextIcon);
     switchBtn.addEventListener("click", () => {
       this.overviewMode = nextMode;
@@ -308,11 +308,11 @@ export class MotesSidebarView extends ItemView {
 
   private promptAsync(title: string, defaultValue: string): Promise<string | null> {
     return new Promise((resolve) => {
-      const backdrop = activeDocument.body.createDiv({ cls: "Motes-modal-backdrop" });
-      const box = backdrop.createDiv({ cls: "Motes-modal Motes-confirm" });
-      box.createDiv({ cls: "Motes-modal-title", text: title });
-      const input = box.createEl("input", { cls: "Motes-buddy-egg-input", attr: { type: "text", maxlength: "20", value: defaultValue } });
-      const btns = box.createDiv({ cls: "Motes-modal-btns" });
+      const backdrop = activeDocument.body.createDiv({ cls: "motes-modal-backdrop" });
+      const box = backdrop.createDiv({ cls: "motes-modal Motes-confirm" });
+      box.createDiv({ cls: "motes-modal-title", text: title });
+      const input = box.createEl("input", { cls: "motes-buddy-egg-input", attr: { type: "text", maxlength: "20", value: defaultValue } });
+      const btns = box.createDiv({ cls: "motes-modal-btns" });
       btns.createEl("button", { text: t("buddy.rename.cancel") }).addEventListener("click", () => { backdrop.remove(); resolve(null); });
       btns.createEl("button", { text: t("buddy.rename.save"), cls: "mod-cta" }).addEventListener("click", () => { backdrop.remove(); resolve(input.value); });
       backdrop.addEventListener("mousedown", (e) => { if (e.target === backdrop) { backdrop.remove(); resolve(null); } });
@@ -345,13 +345,13 @@ export class MotesSidebarView extends ItemView {
       const map = children as Map<string, unknown>;
       const count = map.get("_count") as number | undefined;
       const active = filter.tag === key;
-      const el = parent.createDiv({ cls: "Motes-nav-item Motes-tag-item" + (active ? " active" : "") });
+      const el = parent.createDiv({ cls: "motes-nav-item Motes-tag-item" + (active ? " active" : "") });
       el.style.paddingLeft = `${12 + depth * 14}px`;
-      const icon = el.createDiv({ cls: "Motes-nav-icon" });
+      const icon = el.createDiv({ cls: "motes-nav-icon" });
       setIcon(icon, "hash");
       const parts = key.split("/");
-      el.createSpan({ cls: "Motes-nav-text", text: parts[parts.length - 1] });
-      if (count !== undefined) el.createSpan({ cls: "Motes-nav-count", text: String(count) });
+      el.createSpan({ cls: "motes-nav-text", text: parts[parts.length - 1] });
+      if (count !== undefined) el.createSpan({ cls: "motes-nav-count", text: String(count) });
       el.addEventListener("click", () => { setFilter({ tag: filter.tag === key ? null : key, preset: "all" }); });
       if (map.size > 1) this.renderTagTree(parent, map, depth + 1, filter);
     }

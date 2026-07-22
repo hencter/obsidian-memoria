@@ -1,7 +1,7 @@
 // ================= 统计报告（作为 Obsidian 标签页打开） =================
 
 import { ItemView, WorkspaceLeaf, setIcon } from "obsidian";
-import { Memo, RESERVED_TAGS, VIEW_TYPE_Motes_STATS } from "./types";
+import { Memo, RESERVED_TAGS, VIEW_TYPE_MOTES_STATS } from "./types";
 import type { MemoStore } from "./store";
 import { t, getCurrentLocale } from "./i18n";
 
@@ -15,7 +15,7 @@ export class StatsView extends ItemView {
   }
 
   getViewType(): string {
-    return VIEW_TYPE_Motes_STATS;
+    return VIEW_TYPE_MOTES_STATS;
   }
 
   getDisplayText(): string {
@@ -28,8 +28,8 @@ export class StatsView extends ItemView {
 
   async onOpen(): Promise<void> {
     this.workspaceLeafEl = this.contentEl.closest(".workspace-leaf");
-    this.workspaceLeafEl?.addClass("Motes-stats-workspace-leaf");
-    this.contentEl.addClass("Motes-stats-view");
+    this.workspaceLeafEl?.addClass("motes-stats-workspace-leaf");
+    this.contentEl.addClass("motes-stats-view");
     this.memos = this.store.getAll();
     this.render();
     this.unsubscribe = this.store.onChange(() => {
@@ -39,7 +39,7 @@ export class StatsView extends ItemView {
   }
 
   async onClose(): Promise<void> {
-    this.workspaceLeafEl?.removeClass("Motes-stats-workspace-leaf");
+    this.workspaceLeafEl?.removeClass("motes-stats-workspace-leaf");
     this.workspaceLeafEl = null;
     if (this.unsubscribe) this.unsubscribe();
   }
@@ -63,7 +63,7 @@ export class StatsView extends ItemView {
       return;
     }
 
-    const body = contentEl.createDiv({ cls: "Motes-stats-body" });
+    const body = contentEl.createDiv({ cls: "motes-stats-body" });
     this.renderOverview(body);
     this.renderYearHeatmap(body);
     this.renderTopTags(body);

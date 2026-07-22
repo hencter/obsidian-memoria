@@ -16,7 +16,7 @@ import {
   HoverPopover,
   normalizePath,
 } from "obsidian";
-import { Memo, MotesSettings, RESERVED_TAGS, VIEW_TYPE_Motes, VIEW_TYPE_Motes_STATS, VIEW_TYPE_Motes_YEAR, VIEW_TYPE_Motes_SIDEBAR } from "./types";
+import { Memo, MotesSettings, RESERVED_TAGS, VIEW_TYPE_Motes, VIEW_TYPE_MOTES_STATS, VIEW_TYPE_MOTES_YEAR, VIEW_TYPE_MOTES_SIDEBAR } from "./types";
 import { MemoStore } from "./store";
 import { TagSuggest } from "./tag-suggest";
 import { extractImages, renderImageGrid, openLightbox } from "./image-grid";
@@ -160,8 +160,8 @@ export class MotesView extends ItemView implements HoverParent {
 
   async onOpen(): Promise<void> {
     this.workspaceLeafEl = this.contentEl.closest(".workspace-leaf");
-    this.workspaceLeafEl?.addClass("Motes-workspace-leaf");
-    this.contentEl.addClass("Motes-root");
+    this.workspaceLeafEl?.addClass("motes-workspace-leaf");
+    this.contentEl.addClass("motes-root");
     this.buildLayout();
     this.unsubscribe = this.store.onChange(() => this.renderAll());
 
@@ -208,7 +208,7 @@ export class MotesView extends ItemView implements HoverParent {
   }
 
   async onClose(): Promise<void> {
-    this.workspaceLeafEl?.removeClass("Motes-workspace-leaf");
+    this.workspaceLeafEl?.removeClass("motes-workspace-leaf");
     this.workspaceLeafEl = null;
     if (this.unsubscribe) this.unsubscribe();
     if (this.filterUnsub) { this.filterUnsub(); this.filterUnsub = null; }
@@ -225,27 +225,27 @@ export class MotesView extends ItemView implements HoverParent {
   private buildLayout(): void {
     const root = this.contentEl;
     root.empty();
-    root.addClass("Motes-container");
+    root.addClass("motes-container");
 
-    const shell = root.createDiv({ cls: "Motes-shell" });
-    this.sidebarEl = shell.createDiv({ cls: "Motes-sidebar" });
+    const shell = root.createDiv({ cls: "motes-shell" });
+    this.sidebarEl = shell.createDiv({ cls: "motes-sidebar" });
     // 移动端蒙版
-    const overlay = shell.createDiv({ cls: "Motes-sidebar-overlay" });
+    const overlay = shell.createDiv({ cls: "motes-sidebar-overlay" });
     overlay.addEventListener("click", () => this.toggleSidebar(false));
-    const main = shell.createDiv({ cls: "Motes-main" });
+    const main = shell.createDiv({ cls: "motes-main" });
 
     // 顶部 bar
-    const topBar = main.createDiv({ cls: "Motes-topbar" });
-    const titleWrap = topBar.createDiv({ cls: "Motes-topbar-title" });
-    const logoEl = titleWrap.createSpan({ cls: "Motes-logo" });
+    const topBar = main.createDiv({ cls: "motes-topbar" });
+    const titleWrap = topBar.createDiv({ cls: "motes-topbar-title" });
+    const logoEl = titleWrap.createSpan({ cls: "motes-logo" });
     setIcon(logoEl, "feather");
-    titleWrap.createSpan({ cls: "Motes-brand", text: this.settings.brandName || "" });
+    titleWrap.createSpan({ cls: "motes-brand", text: this.settings.brandName || "" });
 
-    const searchWrap = topBar.createDiv({ cls: "Motes-search-wrap" });
-    const searchIcon = searchWrap.createDiv({ cls: "Motes-search-icon" });
+    const searchWrap = topBar.createDiv({ cls: "motes-search-wrap" });
+    const searchIcon = searchWrap.createDiv({ cls: "motes-search-icon" });
     setIcon(searchIcon, "search");
     this.searchEl = searchWrap.createEl("input", {
-      cls: "Motes-search",
+      cls: "motes-search",
       attr: {
         // v1.1.15: placeholder 回归简洁，去掉 v1.1.11 加的"支持 #标签 关键词"提示
         //   功能还在，但 UI 上保持干净；感兴趣的用户会在 README / 设置页看到说明
@@ -270,13 +270,13 @@ export class MotesView extends ItemView implements HoverParent {
     // v1.4.5: 顶部工具区（独立于搜索框），右侧放「数据报告」「年度全景」
     //   之前把数据报告按钮塞在 search-wrap 里，会让人误以为和搜索是同一组功能，
     //   现在改成独立的 topbar-tools 区域，语义上"左内容右工具"，也方便未来扩展。
-    const tools = topBar.createDiv({ cls: "Motes-topbar-tools" });
+    const tools = topBar.createDiv({ cls: "motes-topbar-tools" });
 
     // v2.0.0: 密度切换按钮 —— 紧凑 / 宽松两档切换
     //   紧凑模式每张卡片只显示前几行，适合"找某条"的高密度浏览
     //   宽松模式是默认，适合阅读沉浸
     const densityBtn = tools.createEl("button", {
-      cls: "Motes-icon-btn",
+      cls: "motes-icon-btn",
       attr: { "aria-label": t("density.toggle") },
     });
     const updateDensityIcon = () => {
@@ -303,7 +303,7 @@ export class MotesView extends ItemView implements HoverParent {
 
     // v2.0.0: 导出按钮 —— 点击弹 Menu 选格式
     const exportBtn = tools.createEl("button", {
-      cls: "Motes-icon-btn",
+      cls: "motes-icon-btn",
       attr: { "aria-label": t("card.exportTooltip") },
     });
     setIcon(exportBtn, "download");
@@ -331,14 +331,14 @@ export class MotesView extends ItemView implements HoverParent {
     });
 
     const yearBtn = tools.createEl("button", {
-      cls: "Motes-icon-btn",
+      cls: "motes-icon-btn",
       attr: { "aria-label": t("toolbar.yearPanorama") },
     });
     setIcon(yearBtn, "calendar-days");
     yearBtn.addEventListener("click", () => {
       void (async () => {
       const existing = this.app.workspace.getLeavesOfType(
-        VIEW_TYPE_Motes_YEAR
+        VIEW_TYPE_MOTES_YEAR
       );
       if (existing.length) {
         await this.app.workspace.revealLeaf(existing[0]);
@@ -346,7 +346,7 @@ export class MotesView extends ItemView implements HoverParent {
       }
       const leaf = this.app.workspace.getLeaf("tab");
       await leaf.setViewState({
-        type: VIEW_TYPE_Motes_YEAR,
+        type: VIEW_TYPE_MOTES_YEAR,
         active: true,
       });
       await this.app.workspace.revealLeaf(leaf);
@@ -356,7 +356,7 @@ export class MotesView extends ItemView implements HoverParent {
     });
 
     const statsBtn = tools.createEl("button", {
-      cls: "Motes-icon-btn",
+      cls: "motes-icon-btn",
       attr: { "aria-label": t("toolbar.statsReport") },
     });
     setIcon(statsBtn, "bar-chart-3");
@@ -364,7 +364,7 @@ export class MotesView extends ItemView implements HoverParent {
       void (async () => {
       // 在新标签页打开数据报告视图
       const existing = this.app.workspace.getLeavesOfType(
-        VIEW_TYPE_Motes_STATS
+        VIEW_TYPE_MOTES_STATS
       );
       if (existing.length) {
         await this.app.workspace.revealLeaf(existing[0]);
@@ -372,7 +372,7 @@ export class MotesView extends ItemView implements HoverParent {
       }
       const leaf = this.app.workspace.getLeaf("tab");
       await leaf.setViewState({
-        type: VIEW_TYPE_Motes_STATS,
+        type: VIEW_TYPE_MOTES_STATS,
         active: true,
       });
       await this.app.workspace.revealLeaf(leaf);
@@ -383,7 +383,7 @@ export class MotesView extends ItemView implements HoverParent {
 
     // 侧栏切换按钮：桌面端收起侧栏，移动端打开抽屉
     const toggleBtn = topBar.createEl("button", {
-      cls: "Motes-icon-btn Motes-sidebar-toggle",
+      cls: "motes-icon-btn Motes-sidebar-toggle",
       attr: {
         "aria-label": t("toolbar.toggleSidebar"),
         title: t("toolbar.toggleSidebar"),
@@ -391,7 +391,7 @@ export class MotesView extends ItemView implements HoverParent {
     });
     const syncSidebarToggleIcon = () => {
       toggleBtn.empty();
-      const standaloneOpen = this.app.workspace.getLeavesOfType(VIEW_TYPE_Motes_SIDEBAR).length > 0;
+      const standaloneOpen = this.app.workspace.getLeavesOfType(VIEW_TYPE_MOTES_SIDEBAR).length > 0;
       if (standaloneOpen) {
         setIcon(toggleBtn, "panel-left");
       } else if (this.isMobileSidebarLayout()) {
@@ -399,7 +399,7 @@ export class MotesView extends ItemView implements HoverParent {
       } else {
         setIcon(
           toggleBtn,
-          this.contentEl.hasClass("Motes-sidebar-collapsed")
+          this.contentEl.hasClass("motes-sidebar-collapsed")
             ? "panel-left-open"
             : "panel-left-close"
         );
@@ -407,15 +407,15 @@ export class MotesView extends ItemView implements HoverParent {
     };
     syncSidebarToggleIcon();
     toggleBtn.addEventListener("click", () => {
-      const standaloneOpen = this.app.workspace.getLeavesOfType(VIEW_TYPE_Motes_SIDEBAR).length > 0;
+      const standaloneOpen = this.app.workspace.getLeavesOfType(VIEW_TYPE_MOTES_SIDEBAR).length > 0;
       if (standaloneOpen) {
-        this.app.workspace.getLeavesOfType(VIEW_TYPE_Motes_SIDEBAR)[0].detach();
+        this.app.workspace.getLeavesOfType(VIEW_TYPE_MOTES_SIDEBAR)[0].detach();
         this.toggleDesktopSidebar(false);
       } else if (this.isMobileSidebarLayout()) {
-        this.toggleSidebar(!this.contentEl.hasClass("Motes-sidebar-open"));
+        this.toggleSidebar(!this.contentEl.hasClass("motes-sidebar-open"));
       } else {
         this.toggleDesktopSidebar(
-          !this.contentEl.hasClass("Motes-sidebar-collapsed")
+          !this.contentEl.hasClass("motes-sidebar-collapsed")
         );
       }
       syncSidebarToggleIcon();
@@ -428,10 +428,10 @@ export class MotesView extends ItemView implements HoverParent {
     const resizeObserver = new ResizeObserver(() => {
       const w = root.clientWidth;
       const isMobile = w <= MOBILE_BREAK;
-      const standaloneOpen = this.app.workspace.getLeavesOfType(VIEW_TYPE_Motes_SIDEBAR).length > 0;
+      const standaloneOpen = this.app.workspace.getLeavesOfType(VIEW_TYPE_MOTES_SIDEBAR).length > 0;
       if (isMobile || standaloneOpen) return;
       const shouldCollapse = w <= MEDIUM_BREAK;
-      root.classList.toggle("Motes-auto-collapse", shouldCollapse);
+      root.classList.toggle("motes-auto-collapse", shouldCollapse);
       if (shouldCollapse && !lastAutoState) {
         if (!root.dataset.MotesAutoCollapsed) {
           root.dataset.MotesAutoCollapsed = "true";
@@ -457,7 +457,7 @@ export class MotesView extends ItemView implements HoverParent {
     this.buildInputCard(main);
 
     // 列表
-    this.listEl = main.createDiv({ cls: "Motes-list" });
+    this.listEl = main.createDiv({ cls: "motes-list" });
     this.listEl.addEventListener("scroll", () => {
       if (
         this.listEl.scrollTop + this.listEl.clientHeight >=
@@ -508,7 +508,7 @@ export class MotesView extends ItemView implements HoverParent {
 
     // FAB 按钮
     this.fabEl = this.contentEl.createEl("button", {
-      cls: "Motes-fab",
+      cls: "motes-fab",
       attr: { "aria-label": t("fab.aria") },
     });
     setIcon(this.fabEl, "plus");
@@ -523,7 +523,7 @@ export class MotesView extends ItemView implements HoverParent {
     );
     if (inputCard) {
       const closeBtn = inputCard.createEl("button", {
-        cls: "Motes-input-close",
+        cls: "motes-input-close",
         attr: { "aria-label": t("fab.close") },
       });
       setIcon(closeBtn, "x");
@@ -548,9 +548,9 @@ export class MotesView extends ItemView implements HoverParent {
   private syncFabMode(): void {
     const isFab = this.settings.mobileInputStyle === "fab";
     if (isFab) {
-      this.contentEl.addClass("Motes-input-fab-mode");
+      this.contentEl.addClass("motes-input-fab-mode");
     } else {
-      this.contentEl.removeClass("Motes-input-fab-mode");
+      this.contentEl.removeClass("motes-input-fab-mode");
       // 切回常驻模式时，强制清掉展开 class，避免遗留状态
       this.contentEl.removeClass("is-fab-expanded");
     }
@@ -559,7 +559,7 @@ export class MotesView extends ItemView implements HoverParent {
   // ============== 快捷筛选 Tab 栏 ==============
 
   private buildQuickTabs(parent: HTMLElement): void {
-    this.quickTabsEl = parent.createDiv({ cls: "Motes-quick-tabs" });
+    this.quickTabsEl = parent.createDiv({ cls: "motes-quick-tabs" });
   }
 
   private renderQuickTabs(): void {
@@ -576,11 +576,11 @@ export class MotesView extends ItemView implements HoverParent {
     for (const tab of tabs) {
       const active = filter.preset === tab.key && !filter.tag && !filter.year;
       const btn = this.quickTabsEl.createEl("button", {
-        cls: "Motes-quick-tab" + (active ? " is-active" : ""),
+        cls: "motes-quick-tab" + (active ? " is-active" : ""),
       });
-      const icon = btn.createSpan({ cls: "Motes-quick-tab-icon" });
+      const icon = btn.createSpan({ cls: "motes-quick-tab-icon" });
       setIcon(icon, tab.icon);
-      btn.createSpan({ cls: "Motes-quick-tab-label", text: tab.label });
+      btn.createSpan({ cls: "motes-quick-tab-label", text: tab.label });
       btn.addEventListener("click", () => {
         this.filter.preset = tab.key;
         this.filter.tag = null;
@@ -631,15 +631,15 @@ export class MotesView extends ItemView implements HoverParent {
   }
 
   private buildInputCard(parent: HTMLElement): void {
-    const inputCard = parent.createDiv({ cls: "Motes-input-card" });
+    const inputCard = parent.createDiv({ cls: "motes-input-card" });
 
     this.inputEl = inputCard.createEl("textarea", {
-      cls: "Motes-input",
+      cls: "motes-input",
       attr: { rows: "1" },
     });
-    this.inputEl.style.display = "none";
+    this.inputEl.addClass("motes-input-hidden");
 
-      this.editorHostEl = inputCard.createDiv({ cls: "Motes-editor-host" });
+      this.editorHostEl = inputCard.createDiv({ cls: "motes-editor-host" });
     // 设置初始高度
     const h = this.settings.editorHeight || 200;
     this.editorHostEl.style.height = `${h}px`;
@@ -660,46 +660,46 @@ export class MotesView extends ItemView implements HoverParent {
     // 标签联想（仍然绑定 textarea，但编辑器输入同步到 textarea 后 TagSuggest 可工作）
     this.tagSuggest = new TagSuggest(this.app, this.inputEl);
 
-    const inputToolbar = inputCard.createDiv({ cls: "Motes-input-toolbar" });
-    const toolLeft = inputToolbar.createDiv({ cls: "Motes-input-tools" });
+    const inputToolbar = inputCard.createDiv({ cls: "motes-input-toolbar" });
+    const toolLeft = inputToolbar.createDiv({ cls: "motes-input-tools" });
 
     const addTagBtn = toolLeft.createEl("button", {
-      cls: "Motes-tool-btn",
+      cls: "motes-tool-btn",
       attr: { "aria-label": t("toolbar.insertTag") },
     });
     setIcon(addTagBtn, "hash");
     addTagBtn.addEventListener("click", () => this.insertAtCursor("#"));
 
     const addImageBtn = toolLeft.createEl("button", {
-      cls: "Motes-tool-btn",
+      cls: "motes-tool-btn",
       attr: { "aria-label": t("toolbar.insertImage") },
     });
     setIcon(addImageBtn, "image");
     addImageBtn.addEventListener("click", () => this.pickImageFromDisk());
 
     const ulBtn = toolLeft.createEl("button", {
-      cls: "Motes-tool-btn",
+      cls: "motes-tool-btn",
       attr: { "aria-label": t("toolbar.insertUL") },
     });
     setIcon(ulBtn, "list");
     ulBtn.addEventListener("click", () => this.insertListAtCursor("- "));
 
     const olBtn = toolLeft.createEl("button", {
-      cls: "Motes-tool-btn",
+      cls: "motes-tool-btn",
       attr: { "aria-label": t("toolbar.insertOL") },
     });
     setIcon(olBtn, "list-ordered");
     olBtn.addEventListener("click", () => this.insertOrderedListAtCursor());
 
     const taskBtn = toolLeft.createEl("button", {
-      cls: "Motes-tool-btn",
+      cls: "motes-tool-btn",
       attr: { "aria-label": t("toolbar.insertTask") },
     });
     setIcon(taskBtn, "square-check");
     taskBtn.addEventListener("click", () => this.insertListAtCursor("- [ ] "));
 
     const addTableBtn = toolLeft.createEl("button", {
-      cls: "Motes-tool-btn",
+      cls: "motes-tool-btn",
       attr: { "aria-label": t("toolbar.insertTable") },
     });
     setIcon(addTableBtn, "table");
@@ -712,22 +712,22 @@ export class MotesView extends ItemView implements HoverParent {
       }
     });
 
-    const submitWrap = inputToolbar.createDiv({ cls: "Motes-submit-wrap" });
+    const submitWrap = inputToolbar.createDiv({ cls: "motes-submit-wrap" });
     const editDateTimeInput = submitWrap.createEl("input", {
-      cls: "Motes-edit-datetime Motes-hidden",
+      cls: "motes-edit-datetime Motes-hidden",
       type: "datetime-local",
       attr: { step: "60", title: t("input.editTimeTitle") },
     });
     this.editDateTimeEl = editDateTimeInput;
     const cancelBtn = submitWrap.createEl("button", {
-      cls: "Motes-cancel-btn Motes-hidden",
+      cls: "motes-cancel-btn Motes-hidden",
       text: t("input.cancel"),
     });
     cancelBtn.addEventListener("click", () => this.exitEditMode());
     this.editBannerEl = cancelBtn;
 
     const submitBtn = submitWrap.createEl("button", {
-      cls: "Motes-submit-btn",
+      cls: "motes-submit-btn",
       attr: {
         "aria-label": t("input.submit"),
         title: t("input.submit"),
@@ -777,7 +777,7 @@ export class MotesView extends ItemView implements HoverParent {
     if (!el) return;
     // v2.0.17: 给 height 设 inline 值时临时禁用 transition，避免 0.7s 慢动画拖住打字手感
     //   （CSS 里的 transition 覆盖 min-height + height 两者，下一帧恢复）。
-    el.classList.add("Motes-no-transition");
+    el.classList.add("motes-no-transition");
 
     // v2.0.17-iter15: 空内容直接清 inline height，让 CSS min-height 接管。
     //   这一步必须放在 scrollHeight 测量之前 —— 否则会踩这个坑：
@@ -790,7 +790,7 @@ export class MotesView extends ItemView implements HoverParent {
     if (el.value.length === 0) {
       el.setCssStyles({ height: "" });
       window.requestAnimationFrame(() => {
-        el.classList.remove("Motes-no-transition");
+        el.classList.remove("motes-no-transition");
       });
       return;
     }
@@ -814,7 +814,7 @@ export class MotesView extends ItemView implements HoverParent {
     }
     // 下一帧恢复 transition（hover/focus 切换时动画正常）
     window.requestAnimationFrame(() => {
-      el.classList.remove("Motes-no-transition");
+      el.classList.remove("motes-no-transition");
     });
   }
 
@@ -1099,27 +1099,27 @@ export class MotesView extends ItemView implements HoverParent {
     const isMobile = Platform.isMobile;
     const MAX = isMobile ? 5 : 6;
     const pop = activeDocument.body.createDiv({
-      cls: "Motes-table-picker" + (isMobile ? " is-mobile" : ""),
+      cls: "motes-table-picker" + (isMobile ? " is-mobile" : ""),
     });
 
     // 标题 & 尺寸提示
     const label = pop.createDiv({
-      cls: "Motes-table-picker-label",
+      cls: "motes-table-picker-label",
       text: isMobile ? "点击格子直接插入" : "0 × 0",
     });
 
-    const grid = pop.createDiv({ cls: "Motes-table-picker-grid" });
+    const grid = pop.createDiv({ cls: "motes-table-picker-grid" });
     const cells: HTMLElement[][] = [];
     for (let r = 0; r < MAX; r++) {
       cells[r] = [];
       for (let c = 0; c < MAX; c++) {
-        const cell = grid.createDiv({ cls: "Motes-table-picker-cell" });
+        const cell = grid.createDiv({ cls: "motes-table-picker-cell" });
         cell.dataset.row = String(r);
         cell.dataset.col = String(c);
         // 手机端：给每个格子显示 "R×C" 小数字，让用户明确知道点了会插几行几列
         if (isMobile) {
           cell.createSpan({
-            cls: "Motes-table-picker-cell-text",
+            cls: "motes-table-picker-cell-text",
             text: `${r + 1}×${c + 1}`,
           });
         }
@@ -1144,7 +1144,7 @@ export class MotesView extends ItemView implements HoverParent {
     if (!isMobile) {
       grid.addEventListener("mouseover", (e) => {
         const t = e.target as HTMLElement;
-        if (!t.hasClass("Motes-table-picker-cell")) return;
+        if (!t.hasClass("motes-table-picker-cell")) return;
         const r = parseInt(t.dataset.row ?? "0", 10);
         const c = parseInt(t.dataset.col ?? "0", 10);
         updateHighlight(r, c);
@@ -1152,7 +1152,7 @@ export class MotesView extends ItemView implements HoverParent {
 
       grid.addEventListener("click", (e) => {
         const t = e.target as HTMLElement;
-        if (!t.hasClass("Motes-table-picker-cell")) return;
+        if (!t.hasClass("motes-table-picker-cell")) return;
         this.insertTable(selR + 1, selC + 1);
         pop.remove();
       });
@@ -1161,7 +1161,7 @@ export class MotesView extends ItemView implements HoverParent {
       grid.addEventListener("click", (e) => {
         let t = e.target as HTMLElement;
         // 允许点到格子里的 span
-        if (!t.hasClass("Motes-table-picker-cell")) {
+        if (!t.hasClass("motes-table-picker-cell")) {
           t = t.closest(".Motes-table-picker-cell") as HTMLElement;
         }
         if (!t) return;
@@ -1493,12 +1493,12 @@ export class MotesView extends ItemView implements HoverParent {
 
   /** 切换侧栏抽屉（移动端用） */
   private toggleSidebar(open: boolean): void {
-    this.contentEl.toggleClass("Motes-sidebar-open", open);
+    this.contentEl.toggleClass("motes-sidebar-open", open);
   }
 
   /** 收起桌面侧栏，让主内容区获得完整宽度 */
   private toggleDesktopSidebar(collapsed: boolean): void {
-    this.contentEl.toggleClass("Motes-sidebar-collapsed", collapsed);
+    this.contentEl.toggleClass("motes-sidebar-collapsed", collapsed);
     if (collapsed) this.toggleSidebar(false);
   }
 
@@ -1701,8 +1701,8 @@ export class MotesView extends ItemView implements HoverParent {
     if (!this.editBannerEl) return;
     const inputCard = this.inputEl.closest(".Motes-input-card");
     if (this.editingMemo) {
-      this.editBannerEl.removeClass("Motes-hidden");
-      this.editDateTimeEl?.removeClass("Motes-hidden");
+      this.editBannerEl.removeClass("motes-hidden");
+      this.editDateTimeEl?.removeClass("motes-hidden");
       inputCard?.addClass("is-editing");
       this.inputEl.setAttr(
         "placeholder",
@@ -1712,8 +1712,8 @@ export class MotesView extends ItemView implements HoverParent {
         })
       );
     } else {
-      this.editBannerEl.addClass("Motes-hidden");
-      this.editDateTimeEl?.addClass("Motes-hidden");
+      this.editBannerEl.addClass("motes-hidden");
+      this.editDateTimeEl?.addClass("motes-hidden");
       inputCard?.removeClass("is-editing");
       // v2.0.13: 如果当前按某个标签筛选，placeholder 提示用户保存时会自动加该标签
       if (this.filter.tag) {
@@ -1748,7 +1748,7 @@ export class MotesView extends ItemView implements HoverParent {
     this.syncFabMode();
     // 同步筛选状态到独立侧栏
     setFilter({ ...this.filter });
-    const hasStandaloneSidebar = this.app.workspace.getLeavesOfType(VIEW_TYPE_Motes_SIDEBAR).length > 0;
+    const hasStandaloneSidebar = this.app.workspace.getLeavesOfType(VIEW_TYPE_MOTES_SIDEBAR).length > 0;
     if (hasStandaloneSidebar) {
       this.sidebarEl.style.display = "none";
     } else {
@@ -1813,7 +1813,7 @@ export class MotesView extends ItemView implements HoverParent {
       if (effectiveTags.length === 0) noTagCount++;
     }
 
-    const stats = this.sidebarEl.createDiv({ cls: "Motes-stats" });
+    const stats = this.sidebarEl.createDiv({ cls: "motes-stats" });
     this.renderStatItem(stats, memos.length.toString(), t("stats.memos"));
     this.renderStatItem(stats, tagSet.size.toString(), t("stats.tags"));
     this.renderStatItem(stats, daySet.size.toString(), t("stats.days"));
@@ -1827,7 +1827,7 @@ export class MotesView extends ItemView implements HoverParent {
 
     // 视图区
     this.sidebarEl.createDiv({
-      cls: "Motes-sidebar-section",
+      cls: "motes-sidebar-section",
       text: t("sidebar.section.views"),
     });
     const presets: Array<{
@@ -1861,7 +1861,7 @@ export class MotesView extends ItemView implements HoverParent {
 
     // 检索式
     this.sidebarEl.createDiv({
-      cls: "Motes-sidebar-section",
+      cls: "motes-sidebar-section",
       text: t("sidebar.section.search"),
     });
     this.renderNavItem("no-tag", "tag", t("sidebar.noTag"), noTagCount);
@@ -1876,7 +1876,7 @@ export class MotesView extends ItemView implements HoverParent {
     }
     if (this.settings.showSidebarYears && yearCount.size) {
       this.sidebarEl.createDiv({
-        cls: "Motes-sidebar-section",
+        cls: "motes-sidebar-section",
         text: t("sidebar.section.years"),
       });
       const years = [...yearCount.entries()].sort((a, b) =>
@@ -1885,13 +1885,13 @@ export class MotesView extends ItemView implements HoverParent {
       for (const [y, c] of years) {
         const el = this.sidebarEl.createDiv({
           cls:
-            "Motes-nav-item" +
+            "motes-nav-item" +
             (this.filter.year === y ? " active" : ""),
         });
-        const icon = el.createDiv({ cls: "Motes-nav-icon" });
+        const icon = el.createDiv({ cls: "motes-nav-icon" });
         setIcon(icon, "calendar");
-        el.createSpan({ cls: "Motes-nav-text", text: y });
-        el.createSpan({ cls: "Motes-nav-count", text: String(c) });
+        el.createSpan({ cls: "motes-nav-text", text: y });
+        el.createSpan({ cls: "motes-nav-count", text: String(c) });
         el.addEventListener("click", () => {
           this.filter.year = this.filter.year === y ? null : y;
           this.filter.preset = "all";
@@ -1912,10 +1912,10 @@ export class MotesView extends ItemView implements HoverParent {
 
       if (tagCount.size) {
         const sectionHead = this.sidebarEl.createDiv({
-          cls: "Motes-sidebar-section Motes-section-collapsible",
+          cls: "motes-sidebar-section Motes-section-collapsible",
         });
         sectionHead.createSpan({
-          cls: "Motes-section-arrow",
+          cls: "motes-section-arrow",
           text: this.tagsExpanded ? "▾" : "▸",
         });
         sectionHead.createSpan({ text: ` ${t("sidebar.section.tags")} (${tagCount.size})` });
@@ -1940,13 +1940,13 @@ export class MotesView extends ItemView implements HoverParent {
     const isActive =
       this.filter.preset === key && !this.filter.tag && !this.filter.year;
     const el = this.sidebarEl.createDiv({
-      cls: "Motes-nav-item" + (isActive ? " active" : ""),
+      cls: "motes-nav-item" + (isActive ? " active" : ""),
     });
-    const iconEl = el.createDiv({ cls: "Motes-nav-icon" });
+    const iconEl = el.createDiv({ cls: "motes-nav-icon" });
     setIcon(iconEl, icon);
-    el.createSpan({ cls: "Motes-nav-text", text });
+    el.createSpan({ cls: "motes-nav-text", text });
     if (count !== undefined) {
-      el.createSpan({ cls: "Motes-nav-count", text: String(count) });
+      el.createSpan({ cls: "motes-nav-count", text: String(count) });
     }
     el.addEventListener("click", () => {
       this.filter.preset = key;
@@ -1965,17 +1965,17 @@ export class MotesView extends ItemView implements HoverParent {
     num: string,
     label: string
   ): void {
-    const item = parent.createDiv({ cls: "Motes-stat" });
-    item.createDiv({ cls: "Motes-stat-num", text: num });
-    item.createDiv({ cls: "Motes-stat-label", text: label });
+    const item = parent.createDiv({ cls: "motes-stat" });
+    item.createDiv({ cls: "motes-stat-num", text: num });
+    item.createDiv({ cls: "motes-stat-label", text: label });
   }
 
   /** 热力图 / 月历 / 宠物视图容器（v2.1.0 三态切换，按钮在统计条上） */
   private renderOverview(parent: HTMLElement, memos: Memo[]): void {
-    const wrap = parent.createDiv({ cls: "Motes-overview" });
+    const wrap = parent.createDiv({ cls: "motes-overview" });
 
     // 内容区
-    const content = wrap.createDiv({ cls: "Motes-overview-content" });
+    const content = wrap.createDiv({ cls: "motes-overview-content" });
     if (this.overviewMode === "heatmap") {
       this.renderHeatmap(content, memos);
     } else if (this.overviewMode === "calendar") {
@@ -2075,14 +2075,14 @@ export class MotesView extends ItemView implements HoverParent {
   /** v2.1.0-iter10: 异步输入弹窗（基于 confirmAsync 改造）—— 比浏览器原生 prompt() 不劫持焦点 */
   private promptAsync(title: string, defaultValue: string): Promise<string | null> {
     return new Promise((resolve) => {
-      const backdrop = activeDocument.body.createDiv({ cls: "Motes-modal-backdrop" });
-      const box = backdrop.createDiv({ cls: "Motes-modal Motes-confirm" });
-      box.createDiv({ cls: "Motes-modal-title", text: title });
+      const backdrop = activeDocument.body.createDiv({ cls: "motes-modal-backdrop" });
+      const box = backdrop.createDiv({ cls: "motes-modal Motes-confirm" });
+      box.createDiv({ cls: "motes-modal-title", text: title });
       const input = box.createEl("input", {
-        cls: "Motes-buddy-egg-input",
+        cls: "motes-buddy-egg-input",
         attr: { type: "text", maxlength: "20", value: defaultValue },
       });
-      const btns = box.createDiv({ cls: "Motes-modal-btns" });
+      const btns = box.createDiv({ cls: "motes-modal-btns" });
       const cancel = btns.createEl("button", { text: t("buddy.rename.cancel") });
       const ok = btns.createEl("button", {
         text: t("buddy.rename.save"),
@@ -2193,7 +2193,7 @@ export class MotesView extends ItemView implements HoverParent {
 
     // 进度条（可点击跳今天视图）
     const barWrap = row.createDiv({
-      cls: "Motes-daily-goal",
+      cls: "motes-daily-goal",
       attr: {
         // v1.4.2: 只用 aria-label（Obsidian 会转成气泡），删掉 title 避免双层 tooltip
         "aria-label": goalTooltip,
@@ -2206,16 +2206,16 @@ export class MotesView extends ItemView implements HoverParent {
       this.pageLimit = this.getInitialPageLimit();
       this.renderAll();
     });
-    const bar = barWrap.createDiv({ cls: "Motes-daily-goal-bar" });
-    const fill = bar.createDiv({ cls: "Motes-daily-goal-fill" });
+    const bar = barWrap.createDiv({ cls: "motes-daily-goal-bar" });
+    const fill = bar.createDiv({ cls: "motes-daily-goal-fill" });
     fill.style.width = `${pct}%`;
 
     // 右侧图标组
-    const actions = row.createDiv({ cls: "Motes-daily-goal-actions" });
+    const actions = row.createDiv({ cls: "motes-daily-goal-actions" });
 
     // v1.4.2: 图标从 target（圆形甜甜圈）换成 crosshair（十字准星，辨识度更高且不像甜甜圈）
     const targetBtn = actions.createEl("button", {
-      cls: "Motes-icon-btn Motes-daily-goal-target",
+      cls: "motes-icon-btn Motes-daily-goal-target",
       attr: {
         "aria-label": goalTooltip,
       },
@@ -2245,7 +2245,7 @@ export class MotesView extends ItemView implements HoverParent {
         : "toolbar.toHeatmap";
 
     const switchBtn = actions.createEl("button", {
-      cls: "Motes-icon-btn Motes-daily-goal-switch",
+      cls: "motes-icon-btn Motes-daily-goal-switch",
       attr: {
         "aria-label": t(nextLabelKey),
       },
@@ -2272,9 +2272,9 @@ export class MotesView extends ItemView implements HoverParent {
     const dayMap = new Map<string, number>();
     for (const m of memos) dayMap.set(m.date, (dayMap.get(m.date) ?? 0) + 1);
 
-    const grid = parent.createDiv({ cls: "Motes-heatmap" });
+    const grid = parent.createDiv({ cls: "motes-heatmap" });
     for (let w = 0; w < weeks; w++) {
-      const col = grid.createDiv({ cls: "Motes-heatmap-col" });
+      const col = grid.createDiv({ cls: "motes-heatmap-col" });
       for (let d = 0; d < 7; d++) {
         const day = new Date(startSunday);
         day.setDate(startSunday.getDate() + w * 7 + d);
@@ -2303,7 +2303,7 @@ export class MotesView extends ItemView implements HoverParent {
             this.filter.preset = "all";
             this.renderList();
           });
-          cell.addClass("Motes-clickable");
+          cell.addClass("motes-clickable");
         } else {
           cell.setAttr(
             "title",
@@ -2322,18 +2322,18 @@ export class MotesView extends ItemView implements HoverParent {
     memos: Memo[]
   ): void {
     this.hideHeatmapTooltip();
-    const tip = activeDocument.body.createDiv({ cls: "Motes-heatmap-tooltip" });
-    const head = tip.createDiv({ cls: "Motes-heatmap-tooltip-head" });
+    const tip = activeDocument.body.createDiv({ cls: "motes-heatmap-tooltip" });
+    const head = tip.createDiv({ cls: "motes-heatmap-tooltip-head" });
     head.createSpan({ text: dateKey });
     head.createSpan({
-      cls: "Motes-heatmap-tooltip-count",
+      cls: "motes-heatmap-tooltip-count",
       text: t("list.totalCount", { n: memos.length }),
     });
     // 首条 + 最多 2 条预览
     const preview = memos.slice(0, 2);
     for (const m of preview) {
-      const row = tip.createDiv({ cls: "Motes-heatmap-tooltip-row" });
-      row.createSpan({ cls: "Motes-heatmap-tooltip-time", text: m.time });
+      const row = tip.createDiv({ cls: "motes-heatmap-tooltip-row" });
+      row.createSpan({ cls: "motes-heatmap-tooltip-time", text: m.time });
       // 取前 50 字的纯内容（剥掉标签和图片语法）
       const imgTag = t("list.imageHolder");
       const snippet = m.content
@@ -2344,13 +2344,13 @@ export class MotesView extends ItemView implements HoverParent {
         .trim()
         .slice(0, 50);
       row.createSpan({
-        cls: "Motes-heatmap-tooltip-text",
+        cls: "motes-heatmap-tooltip-text",
         text: snippet || t("list.noText"),
       });
     }
     if (memos.length > 2) {
       tip.createDiv({
-        cls: "Motes-heatmap-tooltip-more",
+        cls: "motes-heatmap-tooltip-more",
         text: t("list.heatmapMore", { n: memos.length - 2 }),
       });
     }
@@ -2422,17 +2422,17 @@ export class MotesView extends ItemView implements HoverParent {
       // Bug fix (v1.1.2): 之前子节点 renderTagTree 的 parent 传的是顶层 sidebarEl，
       //   导致深层标签（如 #A/B/C）全部挤在列表末尾，视觉嵌套关系错乱。
       //   现在给每个节点套一个 wrap，子节点渲染到 wrap 里紧跟父节点下方。
-      const wrap = parent.createDiv({ cls: "Motes-tag-node" });
+      const wrap = parent.createDiv({ cls: "motes-tag-node" });
       const el = wrap.createDiv({
         cls:
-          "Motes-nav-item Motes-tag-item" +
+          "motes-nav-item Motes-tag-item" +
           (this.filter.tag === c.full ? " active" : ""),
       });
       el.style.paddingLeft = `${12 + depth * 14}px`;
-      const icon = el.createDiv({ cls: "Motes-nav-icon" });
+      const icon = el.createDiv({ cls: "motes-nav-icon" });
       icon.setText("#");
-      el.createSpan({ cls: "Motes-nav-text", text: c.name });
-      el.createSpan({ cls: "Motes-nav-count", text: String(c.count) });
+      el.createSpan({ cls: "motes-nav-text", text: c.name });
+      el.createSpan({ cls: "motes-nav-count", text: String(c.count) });
       el.addEventListener("click", () => {
         this.filter.tag = this.filter.tag === c.full ? null : c.full;
         this.filter.preset = "all";
@@ -2480,7 +2480,7 @@ export class MotesView extends ItemView implements HoverParent {
   }
 
   private renderReviewToolbar(parent: HTMLElement): void {
-    const bar = parent.createDiv({ cls: "Motes-review-toolbar" });
+    const bar = parent.createDiv({ cls: "motes-review-toolbar" });
 
     const makeSelect = <T extends string>(
       label: string,
@@ -2488,13 +2488,13 @@ export class MotesView extends ItemView implements HoverParent {
       options: Array<{ value: T; label: string }>,
       onChange: (value: T) => void
     ): void => {
-      const wrap = bar.createDiv({ cls: "Motes-review-control" });
-      const selectWrap = wrap.createDiv({ cls: "Motes-review-select-wrap" });
+      const wrap = bar.createDiv({ cls: "motes-review-control" });
+      const selectWrap = wrap.createDiv({ cls: "motes-review-select-wrap" });
       const select = selectWrap.createEl("select", {
-        cls: "Motes-review-select",
+        cls: "motes-review-select",
         attr: { "aria-label": label },
       });
-      const chevron = selectWrap.createDiv({ cls: "Motes-review-select-icon" });
+      const chevron = selectWrap.createDiv({ cls: "motes-review-select-icon" });
       setIcon(chevron, "chevron-down");
       for (const option of options) {
         select.createEl("option", {
@@ -2558,12 +2558,12 @@ export class MotesView extends ItemView implements HoverParent {
       }
     );
 
-    const keywordWrap = bar.createDiv({ cls: "Motes-review-control Motes-review-keyword" });
-    const keywordBox = keywordWrap.createDiv({ cls: "Motes-review-search-wrap" });
-    const keywordIcon = keywordBox.createDiv({ cls: "Motes-review-search-icon" });
+    const keywordWrap = bar.createDiv({ cls: "motes-review-control Motes-review-keyword" });
+    const keywordBox = keywordWrap.createDiv({ cls: "motes-review-search-wrap" });
+    const keywordIcon = keywordBox.createDiv({ cls: "motes-review-search-icon" });
     setIcon(keywordIcon, "search");
     const keywordInput = keywordBox.createEl("input", {
-      cls: "Motes-review-input",
+      cls: "motes-review-input",
       attr: {
         type: "text",
         placeholder: t("review.keyword.placeholder"),
@@ -2597,8 +2597,8 @@ export class MotesView extends ItemView implements HoverParent {
       if (!isComposingKeyword) applyKeyword();
     });
 
-    const actions = bar.createDiv({ cls: "Motes-review-actions" });
-    const rerollBtn = actions.createEl("button", { cls: "Motes-meta-btn" });
+    const actions = bar.createDiv({ cls: "motes-review-actions" });
+    const rerollBtn = actions.createEl("button", { cls: "motes-meta-btn" });
     setIcon(rerollBtn.createSpan(), "shuffle");
     rerollBtn.createSpan({ text: t("meta.reroll") });
     rerollBtn.addEventListener("click", () => {
@@ -2607,7 +2607,7 @@ export class MotesView extends ItemView implements HoverParent {
       this.renderList();
     });
 
-    const resetBtn = actions.createEl("button", { cls: "Motes-meta-btn" });
+    const resetBtn = actions.createEl("button", { cls: "motes-meta-btn" });
     setIcon(resetBtn.createSpan(), "rotate-ccw");
     resetBtn.createSpan({ text: t("review.filter.reset") });
     resetBtn.addEventListener("click", () => {
@@ -2616,7 +2616,7 @@ export class MotesView extends ItemView implements HoverParent {
       this.renderList();
     });
 
-    const backBtn = actions.createEl("button", { cls: "Motes-meta-btn" });
+    const backBtn = actions.createEl("button", { cls: "motes-meta-btn" });
     setIcon(backBtn.createSpan(), "history");
     backBtn.createSpan({ text: t("meta.backToOnThisDay") });
     backBtn.addEventListener("click", () => {
@@ -2732,9 +2732,9 @@ export class MotesView extends ItemView implements HoverParent {
 
     const memos = this.getFilteredMemos();
 
-    const meta = this.listEl.createDiv({ cls: "Motes-list-meta" });
+    const meta = this.listEl.createDiv({ cls: "motes-list-meta" });
     meta.createDiv({
-      cls: "Motes-list-meta-left",
+      cls: "motes-list-meta-left",
       text: this.describeFilter(memos.length),
     });
 
@@ -2744,26 +2744,26 @@ export class MotesView extends ItemView implements HoverParent {
     //   - "on-this-day" 且 empty 时，在 empty state 里给"随机 5 条"跳转
     if (this.filter.preset === "random" || this.filter.preset === "on-this-day") {
       meta.createDiv({
-        cls: "Motes-list-meta-right",
+        cls: "motes-list-meta-right",
         text: t("review.poolCount", { n: this.getReviewFilterPoolCount() }),
       });
       this.renderReviewToolbar(this.listEl);
     }
     if (memos.length === 0) {
-      const empty = this.listEl.createDiv({ cls: "Motes-empty" });
+      const empty = this.listEl.createDiv({ cls: "motes-empty" });
       // v1.1.19: 在"回顾-每日"模式下给随机 5 条的跳转，避免死页面
       if (this.filter.preset === "on-this-day") {
-        empty.createDiv({ cls: "Motes-empty-emoji", text: "🕰️" });
+        empty.createDiv({ cls: "motes-empty-emoji", text: "🕰️" });
         empty.createDiv({
-          cls: "Motes-empty-text",
+          cls: "motes-empty-text",
           text: t("empty.onThisDay"),
         });
         empty.createDiv({
-          cls: "Motes-empty-sub",
+          cls: "motes-empty-sub",
           text: t("empty.onThisDaySub"),
         });
         const jumpBtn = empty.createEl("button", {
-          cls: "Motes-empty-btn",
+          cls: "motes-empty-btn",
         });
         setIcon(jumpBtn.createSpan(), "shuffle");
         jumpBtn.createSpan({ text: t("empty.onThisDayBtn") });
@@ -2776,24 +2776,24 @@ export class MotesView extends ItemView implements HoverParent {
       }
       // v1.5.0: "待办"视图的友好 empty state —— 所有待办都已勾完才是最棒的结局
       if (this.filter.preset === "todo") {
-        empty.createDiv({ cls: "Motes-empty-emoji", text: "🎉" });
+        empty.createDiv({ cls: "motes-empty-emoji", text: "🎉" });
         empty.createDiv({
-          cls: "Motes-empty-text",
+          cls: "motes-empty-text",
           text: t("empty.todo"),
         });
         empty.createDiv({
-          cls: "Motes-empty-sub",
+          cls: "motes-empty-sub",
           text: t("empty.todoSub"),
         });
         return;
       }
-      empty.createDiv({ cls: "Motes-empty-emoji", text: "📭" });
+      empty.createDiv({ cls: "motes-empty-emoji", text: "📭" });
       empty.createDiv({
-        cls: "Motes-empty-text",
+        cls: "motes-empty-text",
         text: t("empty.default"),
       });
       empty.createDiv({
-        cls: "Motes-empty-sub",
+        cls: "motes-empty-sub",
         text: t("empty.defaultSub"),
       });
       return;
@@ -2805,12 +2805,12 @@ export class MotesView extends ItemView implements HoverParent {
     const normalMemos = visible.filter((m) => !m.isPinned);
 
     const waterfall = this.settings.waterfallLayout;
-    this.listEl.toggleClass("Motes-waterfall", waterfall);
+    this.listEl.toggleClass("motes-waterfall", waterfall);
 
     // 瀑布流模式下，卡片放到独立网格容器里，和 meta bar 分开
     let cardContainer: HTMLElement;
     if (waterfall) {
-      cardContainer = this.listEl.createDiv({ cls: "Motes-waterfall-grid" });
+      cardContainer = this.listEl.createDiv({ cls: "motes-waterfall-grid" });
     } else {
       cardContainer = this.listEl;
     }
@@ -2822,12 +2822,12 @@ export class MotesView extends ItemView implements HoverParent {
         for (const m of pinnedMemos) this.renderMemoCard(cardContainer, m, true);
       } else {
         const pinGroup = cardContainer.createDiv({
-          cls: "Motes-day-group Motes-pin-group",
+          cls: "motes-day-group Motes-pin-group",
         });
         const pinHead = pinGroup.createDiv({
-          cls: "Motes-day-head Motes-pin-head",
+          cls: "motes-day-head Motes-pin-head",
         });
-        const pinIcon = pinHead.createSpan({ cls: "Motes-pin-head-icon" });
+        const pinIcon = pinHead.createSpan({ cls: "motes-pin-head-icon" });
         setIcon(pinIcon, "pin");
         pinHead.createSpan({ text: t("list.pinnedHead", { n: pinnedMemos.length }) });
         for (const m of pinnedMemos) this.renderMemoCard(pinGroup, m, false);
@@ -2851,9 +2851,9 @@ export class MotesView extends ItemView implements HoverParent {
       const yesterdayStr = fmtDateLocal(ydDate);
 
       for (const [date, list] of groups) {
-        const group = cardContainer.createDiv({ cls: "Motes-day-group" });
+        const group = cardContainer.createDiv({ cls: "motes-day-group" });
         group.dataset.date = date;
-        const head = group.createDiv({ cls: "Motes-day-head" });
+        const head = group.createDiv({ cls: "motes-day-head" });
         const d = new Date(date + "T00:00:00");
         const wd = t(`weekday.${d.getDay()}`);
         let label = `${date}  ${wd}`;
@@ -2865,7 +2865,7 @@ export class MotesView extends ItemView implements HoverParent {
     }
 
     if (this.pageLimit < memos.length) {
-      const more = cardContainer.createDiv({ cls: "Motes-load-more" });
+      const more = cardContainer.createDiv({ cls: "motes-load-more" });
       more.setText(t("list.loadMore", { n: memos.length - this.pageLimit }));
     }
   }
@@ -2932,9 +2932,9 @@ export class MotesView extends ItemView implements HoverParent {
       if (isFirstGroup && lastGroup && date === lastGroupDate) {
         for (const m of list) this.renderMemoCard(lastGroup, m);
       } else {
-        const group = this.listEl.createDiv({ cls: "Motes-day-group" });
+        const group = this.listEl.createDiv({ cls: "motes-day-group" });
         group.dataset.date = date;
-        const head = group.createDiv({ cls: "Motes-day-head" });
+        const head = group.createDiv({ cls: "motes-day-head" });
         const d = new Date(date + "T00:00:00");
         const wd = t(`weekday.${d.getDay()}`);
         let label = `${date}  ${wd}`;
@@ -2948,7 +2948,7 @@ export class MotesView extends ItemView implements HoverParent {
 
     // 重新加 load-more 提示（如果还有）
     if (this.pageLimit < allMemos.length) {
-      const more = this.listEl.createDiv({ cls: "Motes-load-more" });
+      const more = this.listEl.createDiv({ cls: "motes-load-more" });
       more.setText(t("list.loadMore", { n: allMemos.length - this.pageLimit }));
     }
   }
@@ -2993,7 +2993,7 @@ export class MotesView extends ItemView implements HoverParent {
     }
     const card = parent.createDiv({
       cls:
-        "Motes-card" +
+        "motes-card" +
         (memo.isPinned ? " is-pinned" : "") +
         (memo.isStarred ? " is-starred" : "") +
         (this.editingMemo === memo ? " is-editing" : "") +
@@ -3052,27 +3052,27 @@ export class MotesView extends ItemView implements HoverParent {
       card.addEventListener("pointerleave", cancel);
     }
 
-    const head = card.createDiv({ cls: "Motes-card-head" });
-    const timeWrap = head.createDiv({ cls: "Motes-card-time-wrap" });
+    const head = card.createDiv({ cls: "motes-card-head" });
+    const timeWrap = head.createDiv({ cls: "motes-card-time-wrap" });
     if (memo.isPinned) {
-      const pinIcon = timeWrap.createSpan({ cls: "Motes-card-pin" });
+      const pinIcon = timeWrap.createSpan({ cls: "motes-card-pin" });
       setIcon(pinIcon, "pin");
       pinIcon.setAttr("aria-label", t("card.pinnedMark"));
     }
     if (memo.isStarred) {
-      const starIcon = timeWrap.createSpan({ cls: "Motes-card-star" });
+      const starIcon = timeWrap.createSpan({ cls: "motes-card-star" });
       setIcon(starIcon, "star");
       starIcon.setAttr("aria-label", t("card.starredMark"));
     }
     timeWrap.createSpan({
-      cls: "Motes-card-time",
+      cls: "motes-card-time",
       text: `${memo.date} ${memo.time}`,
     });
 
-    const actions = head.createDiv({ cls: "Motes-card-actions" });
+    const actions = head.createDiv({ cls: "motes-card-actions" });
     // v1.1.19: 引用 —— hover 时次级可见（原来藏在 ⋯ 菜单里第 4 项，发现率太低）
     const quoteBtn = actions.createEl("button", {
-      cls: "Motes-icon-btn Motes-card-quote",
+      cls: "motes-icon-btn Motes-card-quote",
       attr: { "aria-label": t("toolbar.quote") },
     });
     setIcon(quoteBtn, "quote");
@@ -3082,7 +3082,7 @@ export class MotesView extends ItemView implements HoverParent {
     });
 
     const menuBtn = actions.createEl("button", {
-      cls: "Motes-icon-btn",
+      cls: "motes-icon-btn",
       attr: { "aria-label": t("toolbar.more") },
     });
     setIcon(menuBtn, "more-horizontal");
@@ -3105,7 +3105,7 @@ export class MotesView extends ItemView implements HoverParent {
 
     // 3) 渲染纯文本部分
     if (textForMd.trim()) {
-      const body = card.createDiv({ cls: "Motes-card-body markdown-preview-view markdown-rendered" });
+      const body = card.createDiv({ cls: "motes-card-body markdown-preview-view markdown-rendered" });
       // 预处理：给块级语法前后补空行，让 MarkdownRenderer 能正确识别
       // 代码块/表格/callout/标题/分隔线 这些不补空行的话渲染会出错
       const normalizedMd = normalizeForRender(textForMd);
@@ -3171,10 +3171,10 @@ export class MotesView extends ItemView implements HoverParent {
     // 5) 标签胶囊（过滤保留标签）
     const visibleTags = tags.filter((t) => !RESERVED_TAGS.has(t));
     if (visibleTags.length) {
-      const tagRow = card.createDiv({ cls: "Motes-card-tags" });
+      const tagRow = card.createDiv({ cls: "motes-card-tags" });
       for (const t of visibleTags) {
         const pill = tagRow.createSpan({
-          cls: "Motes-tag-pill",
+          cls: "motes-tag-pill",
           text: `#${t}`,
         });
         pill.addEventListener("click", () => {
@@ -3238,7 +3238,7 @@ export class MotesView extends ItemView implements HoverParent {
 
     boxes.forEach((box, i) => {
       box.disabled = false;
-      box.addClass("Motes-clickable");
+      box.addClass("motes-clickable");
       box.addEventListener("click", (e) => {
         void (async () => {
         e.stopPropagation();
@@ -3273,8 +3273,8 @@ export class MotesView extends ItemView implements HoverParent {
     tables.forEach((tb) => {
       const parent = tb.parentElement;
       if (!parent) return;
-      if (parent.hasClass("Motes-table-wrap")) return;
-      const wrap = createDiv({ cls: "Motes-table-wrap" });
+      if (parent.hasClass("motes-table-wrap")) return;
+      const wrap = createDiv({ cls: "motes-table-wrap" });
       parent.insertBefore(wrap, tb);
       wrap.appendChild(tb);
     });
@@ -3367,7 +3367,7 @@ export class MotesView extends ItemView implements HoverParent {
    * v2.0.0: 搜索关键词高亮。
    *
    * 遍历 body 下所有**文本节点**（不碰 <a>、<code>、<pre> 内部），
-   * 对每个节点做关键词替换 → 用 <mark class="Motes-search-hit"> wrap。
+   * 对每个节点做关键词替换 → 用 <mark class="motes-search-hit"> wrap。
    *
    * 为什么不在 MarkdownRenderer 之前改 md 源文本？
    *   因为会破坏 markdown 语法（比如关键词如果是 "代码"，替换后变 "<mark>代码</mark>"
@@ -3404,7 +3404,7 @@ export class MotesView extends ItemView implements HoverParent {
             );
           }
           const mark = activeDocument.createElement("mark");
-          mark.className = "Motes-search-hit";
+          mark.className = "motes-search-hit";
           mark.textContent = m[0];
           frag.appendChild(mark);
           lastIdx = m.index + m[0].length;
@@ -3464,13 +3464,13 @@ export class MotesView extends ItemView implements HoverParent {
 
         // 创建按钮
         const btn = createEl("button", {
-          cls: "Motes-collapse-toggle",
+          cls: "motes-collapse-toggle",
         });
         const label = btn.createSpan({
-          cls: "Motes-collapse-label",
+          cls: "motes-collapse-label",
           text: t("card.collapseFull"),
         });
-        const iconSpan = btn.createSpan({ cls: "Motes-collapse-icon" });
+        const iconSpan = btn.createSpan({ cls: "motes-collapse-icon" });
         setIcon(iconSpan, "chevron-down");
 
         // v1.3.6 定位策略：
@@ -3629,11 +3629,11 @@ export class MotesView extends ItemView implements HoverParent {
   private confirmAsync(message: string): Promise<boolean> {
     return new Promise((resolve) => {
       const backdrop = activeDocument.body.createDiv({
-        cls: "Motes-modal-backdrop",
+        cls: "motes-modal-backdrop",
       });
-      const box = backdrop.createDiv({ cls: "Motes-modal Motes-confirm" });
-      box.createDiv({ cls: "Motes-modal-title", text: message });
-      const btns = box.createDiv({ cls: "Motes-modal-btns" });
+      const box = backdrop.createDiv({ cls: "motes-modal Motes-confirm" });
+      box.createDiv({ cls: "motes-modal-title", text: message });
+      const btns = box.createDiv({ cls: "motes-modal-btns" });
       const cancel = btns.createEl("button", { text: t("input.cancel") });
       const ok = btns.createEl("button", { text: t("notice.confirmDeleteOk"), cls: "mod-warning" });
 

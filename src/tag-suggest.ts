@@ -197,7 +197,7 @@ export class TagSuggest {
 
   private render(): void {
     if (!this.dropdown) {
-      this.dropdown = activeDocument.body.createDiv({ cls: "Motes-tag-suggest" });
+      this.dropdown = activeDocument.body.createDiv({ cls: "motes-tag-suggest" });
       // 阻止点击下拉框时 textarea 的 blur 抢先关闭
       this.dropdown.addEventListener("mousedown", (e) => e.preventDefault());
     }
@@ -205,11 +205,11 @@ export class TagSuggest {
     this.items.forEach((name, i) => {
       const item = this.dropdown!.createDiv({
         cls:
-          "Motes-tag-suggest-item" + (i === this.active ? " active" : ""),
+          "motes-tag-suggest-item" + (i === this.active ? " active" : ""),
       });
-      const icon = item.createSpan({ cls: "Motes-tag-suggest-icon" });
+      const icon = item.createSpan({ cls: "motes-tag-suggest-icon" });
       setIcon(icon, "hash");
-      item.createSpan({ cls: "Motes-tag-suggest-name", text: name });
+      item.createSpan({ cls: "motes-tag-suggest-name", text: name });
       item.addEventListener("click", () => {
         this.active = i;
         this.applySelected();

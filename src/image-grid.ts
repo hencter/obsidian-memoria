@@ -104,9 +104,9 @@ export function renderImageGrid(
   // 最多显示 9 张，多余用 +N 蒙版
   const display = images.slice(0, 9);
   display.forEach((img, idx) => {
-    const cell = grid.createDiv({ cls: "Motes-img-cell" });
+    const cell = grid.createDiv({ cls: "motes-img-cell" });
     const el = cell.createEl("img", {
-      cls: "Motes-img",
+      cls: "motes-img",
       attr: {
         src: img.src,
         alt: img.alt,
@@ -119,7 +119,7 @@ export function renderImageGrid(
     });
     // 最后一格 & 还有更多
     if (idx === 8 && images.length > 9) {
-      const overlay = cell.createDiv({ cls: "Motes-img-overlay" });
+      const overlay = cell.createDiv({ cls: "motes-img-overlay" });
       overlay.setText(`+${images.length - 9}`);
       overlay.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -134,24 +134,24 @@ export function renderImageGrid(
  */
 export function openLightbox(images: ImageRef[], startIndex: number): void {
   let cur = startIndex;
-  const backdrop = activeDocument.body.createDiv({ cls: "Motes-lightbox" });
-  const stage = backdrop.createDiv({ cls: "Motes-lightbox-stage" });
-  const imgEl = stage.createEl("img", { cls: "Motes-lightbox-img" });
-  const counter = backdrop.createDiv({ cls: "Motes-lightbox-counter" });
+  const backdrop = activeDocument.body.createDiv({ cls: "motes-lightbox" });
+  const stage = backdrop.createDiv({ cls: "motes-lightbox-stage" });
+  const imgEl = stage.createEl("img", { cls: "motes-lightbox-img" });
+  const counter = backdrop.createDiv({ cls: "motes-lightbox-counter" });
 
   const closeBtn = backdrop.createEl("button", {
-    cls: "Motes-lightbox-close",
+    cls: "motes-lightbox-close",
     text: "×",
     attr: { "aria-label": t("lightbox.close") },
   });
 
   const prevBtn = backdrop.createEl("button", {
-    cls: "Motes-lightbox-nav Motes-lightbox-prev",
+    cls: "motes-lightbox-nav Motes-lightbox-prev",
     text: "‹",
     attr: { "aria-label": t("lightbox.prev") },
   });
   const nextBtn = backdrop.createEl("button", {
-    cls: "Motes-lightbox-nav Motes-lightbox-next",
+    cls: "motes-lightbox-nav Motes-lightbox-next",
     text: "›",
     attr: { "aria-label": t("lightbox.next") },
   });

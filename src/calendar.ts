@@ -32,7 +32,7 @@ export function renderCalendar(
   let year = initYear ?? today.getFullYear();
   let month = initMonth ?? today.getMonth();
 
-  const container = parent.createDiv({ cls: "Motes-calendar" });
+  const container = parent.createDiv({ cls: "motes-calendar" });
 
   // 每日笔记数
   const dayMap = new Map<string, number>();
@@ -43,14 +43,14 @@ export function renderCalendar(
     container.empty();
 
     // 月份头
-    const head = container.createDiv({ cls: "Motes-cal-head" });
+    const head = container.createDiv({ cls: "motes-cal-head" });
     const prevBtn = head.createEl("button", {
-      cls: "Motes-cal-nav",
+      cls: "motes-cal-nav",
       attr: { "aria-label": t("calendar.prevMonth") },
     });
     setIcon(prevBtn, "chevron-left");
     const title = head.createDiv({
-      cls: "Motes-cal-title",
+      cls: "motes-cal-title",
       text: t("calendar.monthTitle", { year, m: month + 1 }),
     });
     title.addEventListener("click", () => {
@@ -59,7 +59,7 @@ export function renderCalendar(
       render();
     });
     const nextBtn = head.createEl("button", {
-      cls: "Motes-cal-nav",
+      cls: "motes-cal-nav",
       attr: { "aria-label": t("calendar.nextMonth") },
     });
     setIcon(nextBtn, "chevron-right");
@@ -79,20 +79,20 @@ export function renderCalendar(
     });
 
     // 星期头
-    const weekHead = container.createDiv({ cls: "Motes-cal-week-head" });
+    const weekHead = container.createDiv({ cls: "motes-cal-week-head" });
     for (const w of getWeekdays()) {
-      weekHead.createDiv({ cls: "Motes-cal-wday", text: w });
+      weekHead.createDiv({ cls: "motes-cal-wday", text: w });
     }
 
     // 日期网格
-    const grid = container.createDiv({ cls: "Motes-cal-grid" });
+    const grid = container.createDiv({ cls: "motes-cal-grid" });
     const firstDayOfMonth = new Date(year, month, 1);
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const startDow = firstDayOfMonth.getDay(); // 0=周日
 
     // 前置空格
     for (let i = 0; i < startDow; i++) {
-      grid.createDiv({ cls: "Motes-cal-cell empty" });
+      grid.createDiv({ cls: "motes-cal-cell empty" });
     }
 
     const todayStr = fmtDate(today);
@@ -102,16 +102,16 @@ export function renderCalendar(
       const count = dayMap.get(key) ?? 0;
       const cell = grid.createDiv({
         cls:
-          "Motes-cal-cell" +
+          "motes-cal-cell" +
           (count > 0 ? " has-memo" : "") +
           (key === todayStr ? " is-today" : "") +
           (key === options.activeDate ? " is-active" : ""),
       });
       cell.setAttr("title", count > 0 ? t("calendar.dayCount", { date: key, n: count }) : key);
-      cell.createDiv({ cls: "Motes-cal-num", text: String(day) });
+      cell.createDiv({ cls: "motes-cal-num", text: String(day) });
       // 活跃度指示点
       if (count > 0) {
-        const dot = cell.createDiv({ cls: "Motes-cal-dot" });
+        const dot = cell.createDiv({ cls: "motes-cal-dot" });
         const level =
           count < 2 ? 1 : count < 4 ? 2 : count < 7 ? 3 : 4;
         dot.addClass(`level-${level}`);

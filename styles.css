@@ -2038,6 +2038,12 @@
 .motes-editor-host .cm-gutters {
   display: none !important;
 }
+.motes-sidebar-hidden {
+  display: none !important;
+}
+.motes-input-hidden {
+  display: none !important;
+}
 /* CodeMirror 实时编辑器 */
 .motes-editor-host {
   margin: 0;
