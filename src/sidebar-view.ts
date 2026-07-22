@@ -45,6 +45,8 @@ export class MemoriaSidebarView extends ItemView {
   async onOpen(): Promise<void> {
     this.contentEl.addClass("memoria-sidebar-view");
     this.contentEl.style.overflow = "auto";
+    // 复用内嵌侧栏样式，只覆盖容器背景
+    this.contentEl.style.background = "var(--background-primary)";
     this.unsubscribe = this.store.onChange(() => this.render());
     onFilterChange(() => this.render());
     this.render();
