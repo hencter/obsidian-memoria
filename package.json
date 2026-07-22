@@ -14,7 +14,7 @@
     "flomo",
     "blinko"
   ],
-  "author": "",
+  "author": "Hencter Lew（亦幸）",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.11.0",

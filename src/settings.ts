@@ -373,7 +373,7 @@ export class MemoriaSettingTab extends PluginSettingTab {
           .setCta()
           .onClick(() => {
             window.open(
-              "https://github.com/i-iooi-i/obsidian-memoria",
+              "https://github.com/hencter/obsidian-memoria",
               "_blank"
             );
           })
@@ -384,8 +384,8 @@ export class MemoriaSettingTab extends PluginSettingTab {
     });
     linkP.appendText("🔗 ");
     linkP.createEl("a", {
-      text: "https://github.com/i-iooi-i/obsidian-memoria",
-      href: "https://github.com/i-iooi-i/obsidian-memoria",
+      text: "https://github.com/hencter/obsidian-memoria",
+      href: "https://github.com/hencter/obsidian-memoria",
     });
 
     // 版本号显示
