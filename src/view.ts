@@ -390,23 +390,28 @@ export class MemoriaView extends ItemView implements HoverParent {
     });
     const syncSidebarToggleIcon = () => {
       toggleBtn.empty();
-      setIcon(toggleBtn, "panel-left");
+      setIcon(
+        toggleBtn,
+        this.contentEl.hasClass("memoria-sidebar-collapsed")
+          ? "panel-left-open"
+          : "panel-left-close"
+      );
     };
     syncSidebarToggleIcon();
     toggleBtn.addEventListener("click", () => {
-      void (async () => {
-        const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMORIA_SIDEBAR);
-        if (leaves.length) {
-          // toggle: close if open
-          leaves[0].detach();
-        } else {
-          const leaf = this.app.workspace.getRightLeaf(false);
-          if (leaf) {
-            await leaf.setViewState({ type: VIEW_TYPE_MEMORIA_SIDEBAR, active: true });
-          }
-        }
-      })();
+      const standaloneOpen = this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMORIA_SIDEBAR).length > 0;
+      if (standaloneOpen) {
+        // 独立侧栏已打开 → 关闭它，恢复内嵌侧栏
+        this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMORIA_SIDEBAR)[0].detach();
+        this.toggleDesktopSidebar(false);
+      } else {
+        this.toggleDesktopSidebar(
+          !this.contentEl.hasClass("memoria-sidebar-collapsed")
+        );
+      }
+      syncSidebarToggleIcon();
     });
+    this.registerDomEvent(window, "resize", syncSidebarToggleIcon);
 
     // 输入卡片
     this.buildInputCard(main);
@@ -1659,8 +1664,15 @@ export class MemoriaView extends ItemView implements HoverParent {
 
   private renderAll(): void {
     this.syncFabMode();
-    // 侧栏已拆分为独立 leaf（MemoriaSidebarView），不再内嵌渲染
-    this.sidebarEl.style.display = "none";
+    // 同步筛选状态到独立侧栏
+    setFilter({ ...this.filter });
+    const hasStandaloneSidebar = this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMORIA_SIDEBAR).length > 0;
+    if (hasStandaloneSidebar) {
+      this.sidebarEl.style.display = "none";
+    } else {
+      this.sidebarEl.style.display = "";
+      this.renderSidebar();
+    }
     this.renderList();
   }
 

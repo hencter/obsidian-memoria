@@ -44,6 +44,7 @@ export class MemoriaSidebarView extends ItemView {
 
   async onOpen(): Promise<void> {
     this.contentEl.addClass("memoria-sidebar-view");
+    this.contentEl.style.overflow = "auto";
     this.unsubscribe = this.store.onChange(() => this.render());
     onFilterChange(() => this.render());
     this.render();
