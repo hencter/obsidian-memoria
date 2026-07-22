@@ -93,6 +93,18 @@ export class MemoriaView extends ItemView implements HoverParent {
   private inputPreviewEl: HTMLElement | null = null;
   private inputPreviewComponent = new Component();
   private showInputPreview = false;
+  /** v2.1.0-iter8: 选中包裹快捷键处理器（** == * ~~ `）*/
+  private wrapHandler = new WrapHandler();
+  // 侧栏相关（当独立侧栏未打开时仍走内嵌渲染）
+  private overviewMode: "heatmap" | "calendar" | "buddy" = "heatmap";
+  private overviewModeOverridden = false;
+  private buddyQuipCache: string | null = null;
+  private buddyLastMemoCount = -1;
+  private buddyJustHatched = false;
+  private dailyGoalNoticedDate: string | null = null;
+  private tagsExpanded = false;
+  private heatmapTooltipEl: HTMLElement | null = null;
+  private gPressedAt = 0;
   /** 当前是否处于编辑某条 memo 的模式 */
   private editingMemo: Memo | null = null;
   private editBannerEl: HTMLElement | null = null;
