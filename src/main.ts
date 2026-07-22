@@ -64,6 +64,10 @@ export default class MemoriaPlugin extends Plugin {
       void this.activateView();
     });
 
+    this.addRibbonIcon("panel-left", t("command.openSidebar"), () => {
+      void this.activateSidebarView();
+    });
+
     // 命令
     this.addCommand({
       id: "open-memoria",

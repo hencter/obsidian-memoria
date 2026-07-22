@@ -390,28 +390,35 @@ export class MemoriaView extends ItemView implements HoverParent {
     });
     const syncSidebarToggleIcon = () => {
       toggleBtn.empty();
-      setIcon(
-        toggleBtn,
-        this.contentEl.hasClass("memoria-sidebar-collapsed")
-          ? "panel-left-open"
-          : "panel-left-close"
-      );
+      const standaloneOpen = this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMORIA_SIDEBAR).length > 0;
+      if (standaloneOpen) {
+        setIcon(toggleBtn, "panel-left");
+      } else {
+        setIcon(
+          toggleBtn,
+          this.contentEl.hasClass("memoria-sidebar-collapsed")
+            ? "panel-left-open"
+            : "panel-left-close"
+        );
+      }
     };
     syncSidebarToggleIcon();
     toggleBtn.addEventListener("click", () => {
       const standaloneOpen = this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMORIA_SIDEBAR).length > 0;
       if (standaloneOpen) {
-        // 独立侧栏已打开 → 关闭它，恢复内嵌侧栏
         this.app.workspace.getLeavesOfType(VIEW_TYPE_MEMORIA_SIDEBAR)[0].detach();
         this.toggleDesktopSidebar(false);
       } else {
-        this.toggleDesktopSidebar(
-          !this.contentEl.hasClass("memoria-sidebar-collapsed")
-        );
+        void (async () => {
+          const leaf = this.app.workspace.getLeftLeaf(false);
+          if (leaf) {
+            await leaf.setViewState({ type: VIEW_TYPE_MEMORIA_SIDEBAR, active: true });
+            await this.app.workspace.revealLeaf(leaf);
+          }
+        })();
       }
       syncSidebarToggleIcon();
     });
-    this.registerDomEvent(window, "resize", syncSidebarToggleIcon);
 
     // 输入卡片
     this.buildInputCard(main);
