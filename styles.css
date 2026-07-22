@@ -1947,8 +1947,15 @@
 }
 .memoria-editor-host .cm-content {
   min-height: 0 !important;
+  max-height: 100% !important;
+  height: auto !important;
   padding: 0 4px !important;
   padding-bottom: 0 !important;
+  box-sizing: border-box !important;
+}
+.memoria-editor-host .cm-active.cm-line {
+  height: auto !important;
+  min-height: 0 !important;
 }
 .memoria-editor-host .cm-content::after {
   display: none !important;
