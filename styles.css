@@ -1901,11 +1901,11 @@
 .memoria-input-card:not(.is-focused):not(.has-content):not(.is-editing):not(.dragging) .memoria-editor-host {
   min-height: 40px;
 }
-.memoria-editor-host .workspace-leaf-content {
-  padding: 0 !important;
-}
-.memoria-editor-host .inline-title {
-  display: none !important;
+.memoria-editor-host .cm-content {
+  background: transparent !important;
+  font-family: var(--font-text);
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .memoria-input-hint {

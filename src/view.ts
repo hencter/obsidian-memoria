@@ -707,11 +707,9 @@ export class MemoriaView extends ItemView implements HoverParent {
 
   private autoResizeEditor(): void {
     if (!this.editorHostEl) return;
-    const cm = this.editorHostEl.querySelector(".cm-editor") as HTMLElement | null;
-    if (!cm) return;
-    const scroller = cm.querySelector(".cm-scroller") as HTMLElement | null;
-    if (!scroller) return;
-    const contentHeight = scroller.scrollHeight;
+    const cmContent = this.editorHostEl.querySelector(".cm-content") as HTMLElement | null;
+    if (!cmContent) return;
+    const contentHeight = cmContent.scrollHeight;
     const maxH = window.innerHeight * 0.4;
     const h = Math.min(contentHeight + 16, maxH);
     this.editorHostEl.style.minHeight = `${Math.max(96, h)}px`;
@@ -1461,7 +1459,12 @@ export class MemoriaView extends ItemView implements HoverParent {
 
     const view = this.editorLeaf.view;
     if (view instanceof MarkdownView) {
-      this.editorHostEl.replaceChildren(view.containerEl);
+      const cmContent = (view.containerEl as HTMLElement).querySelector(".cm-content");
+      if (cmContent) {
+        this.editorHostEl.replaceChildren(cmContent);
+      } else {
+        this.editorHostEl.replaceChildren(view.containerEl);
+      }
     }
   }
 
