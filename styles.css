@@ -332,6 +332,9 @@
 .memoria-brand {
   letter-spacing: 0.3px;
 }
+.memoria-brand:empty {
+  display: none;
+}
 .memoria-search-wrap {
   display: flex;
   align-items: center;
@@ -341,6 +344,8 @@
   border-radius: 999px;
   padding: 0 8px 0 12px;
   transition: border-color 0.15s;
+  flex: 0 1 260px;
+  min-width: 120px;
 }
 .memoria-search-wrap:focus-within {
   border-color: var(--interactive-accent);
@@ -355,7 +360,7 @@
   height: 14px;
 }
 .memoria-search {
-  width: 200px;
+  width: 100%;
   padding: 6px 4px;
   border: none;
   background: transparent;
@@ -1812,23 +1817,13 @@
   display: inline-flex;
 }
 
-@media (max-width: 960px) {
-  .memoria-search {
-    width: 160px;
-  }
-}
 @media (max-width: 860px) {
   .memoria-sidebar {
     width: 200px;
   }
-  .memoria-search {
-    width: 120px;
-  }
 }
+
 @media (max-width: 760px) {
-  .memoria-search {
-    width: 90px;
-  }
   .memoria-topbar-title {
     gap: 4px;
   }

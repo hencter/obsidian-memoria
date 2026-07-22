@@ -239,7 +239,7 @@ export class MemoriaView extends ItemView implements HoverParent {
     const titleWrap = topBar.createDiv({ cls: "memoria-topbar-title" });
     const logoEl = titleWrap.createSpan({ cls: "memoria-logo" });
     setIcon(logoEl, "feather");
-    titleWrap.createSpan({ cls: "memoria-brand", text: "Memoria" });
+    titleWrap.createSpan({ cls: "memoria-brand", text: this.settings.brandName || "" });
 
     const searchWrap = topBar.createDiv({ cls: "memoria-search-wrap" });
     const searchIcon = searchWrap.createDiv({ cls: "memoria-search-icon" });

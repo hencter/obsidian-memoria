@@ -77,6 +77,8 @@ export interface MemoriaSettings {
   waterfallLayout: boolean;
   /** v3.0.0: 编辑器初始高度 (px) */
   editorHeight: number;
+  /** v3.0.0: 品牌标题，空字符串则不显示 */
+  brandName: string;
 }
 
 /** v2.1.0: 宠物存档数据（保存在 data.json 里） */
@@ -115,6 +117,7 @@ export const DEFAULT_SETTINGS: MemoriaSettings = {
   storageMode: "yearly",
   waterfallLayout: false,
   editorHeight: 200,
+  brandName: "Memoria",
 };
 
 export const VIEW_TYPE_MEMORIA = "memoria-view";

@@ -352,6 +352,20 @@ export class MemoriaSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName(t("settings.brandName.name"))
+      .setDesc(t("settings.brandName.desc"))
+      .addText((tx) =>
+        tx
+          .setPlaceholder("Memoria")
+          .setValue(this.plugin.settings.brandName)
+          .onChange(async (v) => {
+            this.plugin.settings.brandName = v.trim();
+            await this.plugin.saveSettings();
+            this.plugin.store.notifyChange();
+          })
+      );
+
+    new Setting(containerEl)
       .setName(t("settings.heading.about"))
       .setHeading();
     const p = containerEl.createEl("p", {
