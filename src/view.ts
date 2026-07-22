@@ -710,9 +710,9 @@ export class MemoriaView extends ItemView implements HoverParent {
     const cmContent = this.editorHostEl.querySelector(".cm-content") as HTMLElement | null;
     if (!cmContent) return;
     const contentHeight = cmContent.scrollHeight;
-    const maxH = window.innerHeight * 0.4;
-    const h = Math.min(contentHeight + 16, maxH);
-    this.editorHostEl.style.minHeight = `${Math.max(96, h)}px`;
+    const maxH = window.innerHeight * 0.45;
+    const h = Math.min(contentHeight + 32, maxH);
+    this.editorHostEl.style.minHeight = `${Math.max(120, h)}px`;
   }
 
   /** 在光标处插入文本。
@@ -1459,12 +1459,9 @@ export class MemoriaView extends ItemView implements HoverParent {
 
     const view = this.editorLeaf.view;
     if (view instanceof MarkdownView) {
-      const cmContent = (view.containerEl as HTMLElement).querySelector(".cm-content");
-      if (cmContent) {
-        this.editorHostEl.replaceChildren(cmContent);
-      } else {
-        this.editorHostEl.replaceChildren(view.containerEl);
-      }
+      // 使用完整 containerEl 以保留 Obsidian 的 CSS 选择器上下文
+      // (.cm-s-obsidian, .markdown-source-view.mod-cm6, .cm-editor 等)
+      this.editorHostEl.replaceChildren(view.containerEl);
     }
   }
 
