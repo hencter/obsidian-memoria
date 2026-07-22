@@ -600,27 +600,35 @@ export class MemoriaView extends ItemView implements HoverParent {
     });
     this.inputEl.style.display = "none";
 
-    // Obsidian 原生编辑器宿主
+    // Obsidian 原生编辑器宿主 - 改用 MarkdownRenderer 渲染 + 点击进入编辑
     this.editorHostEl = inputCard.createDiv({ cls: "memoria-editor-host" });
+    this.renderEditorPreview();
+    this.editorHostEl.addEventListener("click", () => {
+      const editor = this.getEditor();
+      if (editor) editor.focus();
+    });
     this.setupNativeEditor().then(() => {
       const draft = this.loadDraft();
       if (draft) this.setEditorValue(draft);
       const editor = this.getEditor();
       if (editor) {
+        // 编辑器内容变化时触发预览刷新
         this.registerDomEvent(this.editorHostEl, "input", () => {
           const val = editor.getValue();
           this.inputEl.value = val;
           if (!this.editingMemo) this.saveDraft(val);
           this.syncInputCardContentState();
+          this.renderEditorPreview();
         });
-        // 编辑器获得焦点 → 展开输入卡片
+        // 编辑器获得焦点时隐藏预览，失焦时显示预览
         this.editorHostEl.addEventListener("focusin", () => {
           inputCard.addClass("is-focused");
+          this.showEditorSource();
         });
         this.editorHostEl.addEventListener("focusout", (e) => {
-          // 焦点移到卡片外才收起
           if (!inputCard.contains(e.relatedTarget as Node)) {
             inputCard.removeClass("is-focused");
+            this.renderEditorPreview();
           }
         });
       }
@@ -1412,6 +1420,42 @@ export class MemoriaView extends ItemView implements HoverParent {
   }
 
   // ============== 原生编辑器 ==============
+
+  private editorPreviewComponent = new Component();
+
+  private renderEditorPreview(): void {
+    if (!this.editorHostEl) return;
+    const md = this.getEditorValue();
+    const cmEl = this.editorHostEl.querySelector(".cm-editor") as HTMLElement | null;
+
+    // 隐藏 CodeMirror 编辑器，显示渲染预览
+    if (cmEl) cmEl.style.display = "none";
+
+    // 检查是否已有预览容器
+    let preview = this.editorHostEl.querySelector(".memoria-editor-render") as HTMLElement | null;
+    if (!preview) {
+      preview = this.editorHostEl.createDiv({ cls: "memoria-editor-render" });
+    }
+
+    this.editorPreviewComponent.unload();
+    this.editorPreviewComponent = new Component();
+    this.editorPreviewComponent.load();
+    preview.empty();
+
+    if (!md.trim()) {
+      preview.createDiv({ cls: "memoria-editor-render-empty", text: t("preview.empty") });
+      return;
+    }
+
+    void MarkdownRenderer.render(this.app, md, preview, "", this.editorPreviewComponent);
+  }
+
+  private showEditorSource(): void {
+    const cmEl = this.editorHostEl?.querySelector(".cm-editor") as HTMLElement | null;
+    if (cmEl) cmEl.style.display = "";
+    const preview = this.editorHostEl?.querySelector(".memoria-editor-render") as HTMLElement | null;
+    if (preview) preview.remove();
+  }
 
   private getEditor() {
     const view = this.editorLeaf?.view;

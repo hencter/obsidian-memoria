@@ -1963,6 +1963,19 @@
 .memoria-editor-host .cm-gutters {
   display: none !important;
 }
+/* MarkdownRenderer 预览层 */
+.memoria-editor-render {
+  padding: 0 4px;
+  font-size: var(--font-text-size, 14px);
+  line-height: var(--line-height-normal, 1.6);
+  color: var(--text-normal);
+  cursor: text;
+  min-height: 1.6em;
+}
+.memoria-editor-render-empty {
+  color: var(--text-faint);
+  font-style: italic;
+}
 
 .memoria-input-hint {
     display: none;
