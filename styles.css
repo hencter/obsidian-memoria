@@ -1909,6 +1909,12 @@
 .memoria-editor-host .view-header {
   display: none !important;
 }
+.memoria-editor-host .view-header-nav-buttons {
+  display: none !important;
+}
+.memoria-editor-host .view-header-title-container {
+  display: none !important;
+}
 .memoria-editor-host .cm-editor {
   background: transparent !important;
 }
