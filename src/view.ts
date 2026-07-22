@@ -600,18 +600,31 @@ export class MemoriaView extends ItemView implements HoverParent {
     });
     this.inputEl.style.display = "none";
 
-    this.editorHostEl = inputCard.createDiv({ cls: "memoria-editor-host" });
+      this.editorHostEl = inputCard.createDiv({ cls: "memoria-editor-host" });
     this.setupNativeEditor().then(() => {
       const draft = this.loadDraft();
       if (draft) this.setEditorValue(draft);
       const editor = this.getEditor();
       if (editor) {
+        const resize = debounce(() => {
+          requestAnimationFrame(() => {
+            const cmContent = this.editorHostEl?.querySelector(".cm-content") as HTMLElement | null;
+            if (!cmContent) return;
+            const h = cmContent.scrollHeight;
+            const minH = 80;
+            const maxH = Math.min(window.innerHeight * 0.55, 600);
+            const target = Math.max(minH, Math.min(h + 12, maxH));
+            this.editorHostEl.style.height = `${target}px`;
+          });
+        }, 100);
         this.registerDomEvent(this.editorHostEl, "input", () => {
           const val = editor.getValue();
           this.inputEl.value = val;
           if (!this.editingMemo) this.saveDraft(val);
           this.syncInputCardContentState();
+          resize();
         });
+        resize();
       }
     });
 

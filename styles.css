@@ -1967,8 +1967,11 @@
 .memoria-editor-host {
   margin: 0;
   padding: 0;
-  height: 400px !important;
+  height: 120px;
+  min-height: 80px;
+  max-height: 55vh;
   overflow: hidden !important;
+  transition: height 0.15s ease;
 }
 .memoria-editor-host .inline-title,
 .memoria-editor-host .view-header,
