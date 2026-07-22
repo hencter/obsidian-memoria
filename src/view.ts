@@ -3029,7 +3029,7 @@ export class MemoriaView extends ItemView implements HoverParent {
 
     // 3) 渲染纯文本部分
     if (textForMd.trim()) {
-      const body = card.createDiv({ cls: "memoria-card-body" });
+      const body = card.createDiv({ cls: "memoria-card-body markdown-preview-view markdown-rendered" });
       // 预处理：给块级语法前后补空行，让 MarkdownRenderer 能正确识别
       // 代码块/表格/callout/标题/分隔线 这些不补空行的话渲染会出错
       const normalizedMd = normalizeForRender(textForMd);
