@@ -1,185 +1,141 @@
-<div align="center">
+# Motes 🪶
 
-# Memoria 🪶
-
-**A flomo-style fleeting-thoughts plugin for Obsidian**
+**A flow-style note plugin for Obsidian with native editor, waterfall layout and flexible storage.**
 
 > Your data stays as plain Markdown. Freedom belongs to you.
 
-[![release](https://img.shields.io/github/v/release/i-iooi-i/obsidian-memoria?include_prereleases&label=release)](https://github.com/i-iooi-i/obsidian-memoria/releases)
-[![downloads](https://img.shields.io/github/downloads/i-iooi-i/obsidian-memoria/total)](https://github.com/i-iooi-i/obsidian-memoria/releases)
+[![release](https://img.shields.io/github/v/release/hencter/obsidian-motes?include_prereleases&label=release)](https://github.com/hencter/obsidian-motes/releases)
 [![license](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
-[![obsidian](https://img.shields.io/badge/Obsidian-1.4.0%2B-purple)](https://obsidian.md)
 
-**English** · [简体中文](#简体中文)
+[English](#english) · [简体中文](#简体中文)
 
-</div>
+---
+
+> **This project is a fork of [i-iooi-i/obsidian-memoria](https://github.com/i-iooi-i/obsidian-memoria).**  
+> Original concept and architecture by [i-iooi-i](https://github.com/i-iooi-i).  
+> This fork adds substantial new features and UI improvements, listed below.
+
+---
+
+## What's Different from Upstream
+
+Since forking from Memoria v2.3.7, the following has been added or changed:
+
+### Editor & Input
+- **Native Obsidian Editor** — Full CodeMirror live-preview editor embedded directly in the input card (via ephemeral WorkspaceLeaf), supporting all Obsidian shortcuts, wikilinks, callouts, tables, and task lists
+- **Configurable editor height** — Set in settings (60–600px)
+- **Ctrl+Enter** submit with debounced draft auto-save
+
+### Storage
+- **Dual storage modes** — Choose between `YYYY-MM-DD.md` (daily) or `YYYY.md` (yearly) files in settings
+- **Migration command** — One-click migrate daily files into yearly format via command palette
+
+### Layout
+- **Waterfall/card layout** — Sticky-note style multi-column masonry grid with subtle rotation, pastel tints, and hover elevation
+- **Standalone sidebar view** — Sidebar can be opened in Obsidian's left dock as an independent pane (`Ctrl+P` → Open independent sidebar)
+- **Responsive sidebar** — Auto-collapses at narrow viewport widths (960px)
+- **Quick filter tabs** — Underline-style tab bar below the topbar for fast preset switching
+- **Customizable brand title** — Set to any text or leave empty for icon-only
+
+### Card Preview
+- **Native hover-link preview** — Wiki links use Obsidian's built-in Page Preview (registered as HoverLinkSource)
+- **Full Obsidian reading view** — Cards rendered with `markdown-preview-view` and `markdown-rendered` CSS classes for complete theme compatibility
+
+### Data Report & Year View
+- **Stats overview** — Redesigned bignum cards with accent top bars
+- **Year panorama** — Month memo count badges, current-month highlight, clickable month labels
+- **Tag cloud** — Interactive hover scaling
+
+### Author
+- **Rebranded as Motes** by [Hencter Lew（亦幸）](https://github.com/hencter)
+- All internal identifiers, CSS classes, and plugin ID updated
 
 ---
 
 ## English
 
-Memoria is a lightweight memo plugin for Obsidian. It gives you a quick-capture input box, a waterfall-style timeline, tag search, image paste and drag support, task checkbox writeback, pinning, starring, statistics, and a year panorama view.
+Motes is a lightweight note plugin for Obsidian. It gives you a quick-capture input with native editor, a waterfall-style timeline, tag search, image paste and drag support, task checkbox writeback, pinning, starring, statistics, and a year panorama view.
 
-All notes are stored as ordinary Markdown files in your vault. Memoria does not lock your data into a database or a proprietary format, so your memos remain readable and searchable even if you stop using the plugin.
+All notes are stored as ordinary Markdown files in your vault. Motes does not lock your data into a database or a proprietary format.
 
 Main features:
 
-- Quick capture with `Ctrl/Cmd+Enter`
-- Global capture command for fast notes
-- Plain Markdown storage in yearly files
+- Native Obsidian editor with full live preview
+- Plain Markdown storage in daily or yearly files
+- Waterfall card layout with sticky-note style
 - Tag autocomplete and combined tag/keyword search
-- Paste, drag, and file-picker image capture
-- Sidebar heatmap, calendar, statistics report, and year panorama
-- Mobile-friendly layout and touch interactions
-- Chinese and English interface languages
-
-See [README.en.md](./README.en.md) for the full English documentation.
+- Image paste, drag, and file-picker capture
+- Independent sidebar view, heatmap, calendar, stats, and year panorama
+- Quick filter tabs for fast view switching
+- Mobile-friendly layout
+- Chinese and English interface
 
 ---
 
 ## 简体中文
 
-## 📸 看起来像什么样
+### 这是什么
 
-**主视图**（瀑布流 + 侧栏热力图 + 置顶笔记）
+Motes 是一个 Obsidian 笔记插件，帮你在 Obsidian 里以瀑布流的方式快速记录想法。所有数据存为纯 Markdown 文件，停用插件也不影响阅读。
 
-![Memoria 主视图](./docs/screenshots/main.png)
+### 和原版 Memoria 的区别
 
-**数据报告**（365 天热力图、月度柱图、Top 10 标签、24 小时分布、有趣的发现）
+本版本 Fork 自 [i-iooi-i/obsidian-memoria](https://github.com/i-iooi-i/obsidian-memoria) v2.3.7，在此之上做了大量改动：
 
-![数据报告](./docs/screenshots/stats.png)
+- **Obsidian 原生编辑器**：输入区嵌入完整的 CodeMirror 实时预览编辑器，支持全部快捷键、双链、callout、表格、任务列表
+- **双存储模式**：设置可选日记格式（每天一个 YYYY-MM-DD.md）或年格式（每年一个 YYYY.md），提供一键迁移命令
+- **瀑布流卡片布局**：多列瀑布流 + 随意贴风格旋转 + 色纸底色
+- **独立侧栏**：侧栏可作为 Obsidian 左侧面板独立打开，与主视图分离
+- **响应式侧栏**：窄屏自动收起
+- **快捷筛选 Tab**：顶栏下方 underline 风格标签切换
+- **品牌标题**：可自定义或隐藏
+- **数据报告优化**：总览卡片、标签云交互、年度全景优化
+- **重命名为 Motes**，作者 Hencter Lew（亦幸）
 
-**年度全景**（12 个月铺开的日历，点任一天跳回主视图看那天的笔记）
+### 安装
 
-![年度全景](./docs/screenshots/year.png)
+从 [Releases](../../releases/latest) 下载 `main.js`、`manifest.json`、`styles.css` 放入 `<vault>/.obsidian/plugins/motes/`，在 Obsidian 设置中启用。
 
----
+或使用 BRAT 插件输入 `hencter/obsidian-motes` 自动安装更新。
 
-## 💭 为什么做这个
+### 快捷键
 
-我想要一个随手记想法的地方。
+| 动作 | 快捷键 |
+|---|---|
+| 发送 | Ctrl+Enter |
+| 快速记录弹窗 | Ctrl+Shift+M |
 
-不需要复杂的双向链接，不需要知识图谱，也不需要每条笔记都想着"放进哪个文件夹"。就是一个输入框、一个发送按钮，按时间倒序瀑布流显示，偶尔翻翻过去的自己。
+### 存储格式
 
-但我同时希望：**这些想法永远是我能随时 grep 的纯 markdown 文件**。哪一天我不再用这个插件，不再用 Obsidian，甚至不再用电脑的图形界面——那些笔记还躺在硬盘上，文本编辑器打开就能读，命令行 grep 就能搜。
-
-Memoria 就是这样一个插件：把"浮墨式的快速记录体验"搬进 Obsidian，数据落到你自己的 vault 里，存成最普通的 `YYYY.md` 文件。
-
----
-
-## ✨ 它能做什么
-
-**随手记**
-- 输入卡片 + `Ctrl/Cmd+Enter` 发送
-- 全局快捷键 `Ctrl/Cmd+Shift+M` 任意位置唤出速记弹窗
-- 图片：粘贴 / 拖拽 / 选择文件，自动入库为 vault 附件
-- 标签联想（汇集 vault 所有标签）、列表 Tab 缩进、Enter 自动续行
-- 草稿自动保存，重启不丢
-
-**随手翻**
-- 按天分组瀑布流，置顶自动置顶
-- 侧栏 14 周热力图 ↔ 月历一键切换
-- 预设视图：今天 / 本周 / 置顶 / 收藏 / **往年的今天** / 随机 5 条
-- 组合搜索：`#标签 关键词` 空格分隔，多标签多关键词 AND
-
-**看见自己**
-- 数据报告独立标签页：365 天大热力图、月度分布、Top 10 标签、24 小时活跃、标签云
-- 年度全景：12 个月完整日历铺开，看一整年的节奏
-- 有趣的发现：最长连续打卡、最活跃的一天、夜猫子次数、年同比等
-
-**贴心细节**
-- 长笔记自动折叠，点"全文"展开
-- 任务列表可勾选，自动回写 md
-- 卡片右键菜单：置顶 / 收藏 / 编辑 / 引用 / 保存为图片 / 打开原文
-- 删除可软删除到 `_trash.md`（可关）
-- 移动端：抽屉侧栏、长按编辑、表格选择器适配手指
-
----
-
-## 📂 存储格式
-
-Memoria 在指定文件夹下维护 `YYYY.md` 文件，采用「时间独占一行 + 内容缩进」格式：
+**年格式（默认）**：
 
 ```markdown
 # 2026
 
 ## 2026-04-25 周六
-
 - 12:43
-  这是今天的第一条想法 #灵感
+  第一条想法 #灵感
 
 - 14:20
-  又想到了一件事
-  可以换行继续写，每一行都缩进 2 空格
-
-- 15:47
-  > [!tip] callout / 任务列表 / 标题等块级语法都能正确渲染
-
-- 16:30
-  - [ ] 任务列表也 OK
-  - [x] 自动勾选回写
+  下午想到的
 ```
 
-每条 `- HH:MM` 开头是一条独立 memo。**停用插件那一刻，笔记依然是完整可读的 md 文件。**
+**日记格式**：
 
----
-
-## 🚀 安装
-
-目前支持手动安装。从 [Releases](../../releases/latest) 下载最新版的三件套：
-
-```
-<Your Vault>/.obsidian/plugins/memoria/
-├── main.js
-├── manifest.json
-└── styles.css
+```markdown
+- 12:43
+  第一条想法 #灵感
 ```
 
-然后 Obsidian → 设置 → 第三方插件 → 启用 **Memoria** → 左侧 Ribbon 点 🪶 打开面板。
-
-> 也可以用 [BRAT](https://github.com/TfTHacker/obsidian42-brat) 插件输入 `i-iooi-i/obsidian-memoria` 自动安装和更新。
+每条 `- HH:MM` 开头是一条独立笔记。停用插件后依然是完整可读的 md 文件。
 
 ---
 
-## ⌨️ 常用快捷键
+## License
 
-| 动作 | 快捷键 |
-|---|---|
-| 发送当前输入 | `Ctrl/Cmd + Enter` |
-| 快速记录（全局弹窗） | `Ctrl/Cmd + Shift + M` |
-| 列表缩进 / 反缩进 | `Tab` / `Shift+Tab` |
-| 进入编辑模式 | 双击卡片（移动端长按） |
-| 退出编辑 | `Esc` |
+[MIT](./LICENSE) — same as upstream.
 
----
+## Credits
 
-## 🛠 开发
-
-```bash
-npm install
-npm run dev     # watch 模式
-npm run build   # 生产打包
-```
-
----
-
-## 📜 变更日志
-
-详见 [CHANGELOG.md](./CHANGELOG.md)。
-
----
-
-## 📝 许可
-
-[MIT](./LICENSE)
-
----
-
-<div align="center">
-
-**Memoria**，意思是「记忆」。
-
-祝你的每一份记忆，都被温柔保存。
-
-</div>
+- Original plugin [Memoria](https://github.com/i-iooi-i/obsidian-memoria) by [i-iooi-i](https://github.com/i-iooi-i)
+- Maintained and extended by [Hencter Lew（亦幸）](https://github.com/hencter)
