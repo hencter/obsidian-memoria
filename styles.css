@@ -411,6 +411,51 @@
   to { transform: rotate(360deg); }
 }
 
+/* 快捷筛选 Tab 栏 */
+.memoria-quick-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 24px 0;
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+.memoria-quick-tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s;
+  box-shadow: none;
+}
+.memoria-quick-tab:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+.memoria-quick-tab.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-weight: 500;
+}
+.memoria-quick-tab-icon {
+  display: flex;
+  align-items: center;
+  opacity: 0.85;
+}
+.memoria-quick-tab-icon .svg-icon {
+  width: 13px;
+  height: 13px;
+}
+.memoria-quick-tab-label {
+  line-height: 1;
+}
+
 /* 输入卡片 */
 .memoria-input-card {
   margin: 16px 24px 0;

@@ -95,6 +95,7 @@ export class MemoriaView extends ItemView implements HoverParent {
   private wrapHandler = new WrapHandler();
   private editorLeaf!: WorkspaceLeaf;
   private editorHostEl!: HTMLElement;
+  private quickTabsEl!: HTMLElement;
   // 内嵌侧栏状态（独立侧栏未打开时仍使用）
   private overviewMode: "heatmap" | "calendar" | "buddy" = "heatmap";
   private overviewModeOverridden = false;
@@ -420,6 +421,9 @@ export class MemoriaView extends ItemView implements HoverParent {
       syncSidebarToggleIcon();
     });
 
+    // 快捷筛选 Tab 栏
+    this.buildQuickTabs(main);
+
     // 输入卡片
     this.buildInputCard(main);
 
@@ -472,6 +476,7 @@ export class MemoriaView extends ItemView implements HoverParent {
    *  CSS 全部用 (hover: none) and (pointer: coarse) 媒体查询包裹，桌面零影响。
    */
   private buildFab(): void {
+
     // FAB 按钮
     this.fabEl = this.contentEl.createEl("button", {
       cls: "memoria-fab",
@@ -519,6 +524,43 @@ export class MemoriaView extends ItemView implements HoverParent {
       this.contentEl.removeClass("memoria-input-fab-mode");
       // 切回常驻模式时，强制清掉展开 class，避免遗留状态
       this.contentEl.removeClass("is-fab-expanded");
+    }
+  }
+
+  // ============== 快捷筛选 Tab 栏 ==============
+
+  private buildQuickTabs(parent: HTMLElement): void {
+    this.quickTabsEl = parent.createDiv({ cls: "memoria-quick-tabs" });
+  }
+
+  private renderQuickTabs(): void {
+    if (!this.quickTabsEl) return;
+    this.quickTabsEl.empty();
+    const filter = getFilter();
+    const tabs: { key: Filter["preset"]; icon: string; label: string }[] = [
+      { key: "all", icon: "layout-grid", label: t("sidebar.all") },
+      { key: "pinned", icon: "pin", label: t("sidebar.pinned") },
+      { key: "starred", icon: "star", label: t("sidebar.starred") },
+      { key: "today", icon: "calendar", label: t("sidebar.today") },
+      { key: "todo", icon: "check-square", label: t("sidebar.todo") },
+    ];
+    for (const tab of tabs) {
+      const active = filter.preset === tab.key && !filter.tag && !filter.year;
+      const btn = this.quickTabsEl.createEl("button", {
+        cls: "memoria-quick-tab" + (active ? " is-active" : ""),
+      });
+      const icon = btn.createSpan({ cls: "memoria-quick-tab-icon" });
+      setIcon(icon, tab.icon);
+      btn.createSpan({ cls: "memoria-quick-tab-label", text: tab.label });
+      btn.addEventListener("click", () => {
+        this.filter.preset = tab.key;
+        this.filter.tag = null;
+        this.filter.year = null;
+        this.filter.date = null;
+        this.pageLimit = this.getInitialPageLimit();
+        setFilter({ ...this.filter });
+        this.renderAll();
+      });
     }
   }
 
@@ -1680,6 +1722,7 @@ export class MemoriaView extends ItemView implements HoverParent {
       this.sidebarEl.style.display = "";
       this.renderSidebar();
     }
+    this.renderQuickTabs();
     this.renderList();
   }
 
