@@ -1967,17 +1967,8 @@
 .memoria-editor-host {
   margin: 0;
   padding: 0;
-  height: 280px !important;
-  max-height: 45vh !important;
+  height: 400px !important;
   overflow: hidden !important;
-}
-.memoria-input-card:not(.is-focused):not(.has-content):not(.is-editing):not(.dragging) .memoria-editor-host {
-  height: 56px !important;
-}
-.memoria-input-card.is-focused .memoria-editor-host,
-.memoria-input-card.has-content .memoria-editor-host,
-.memoria-input-card.is-editing .memoria-editor-host {
-  height: 280px !important;
 }
 .memoria-editor-host .inline-title,
 .memoria-editor-host .view-header,
@@ -1991,7 +1982,6 @@
 .memoria-editor-host .markdown-source-view,
 .memoria-editor-host .cm-editor {
   height: 100% !important;
-  max-height: 100% !important;
 }
 .memoria-editor-host .cm-scroller {
   font-family: var(--font-text);

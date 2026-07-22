@@ -612,14 +612,6 @@ export class MemoriaView extends ItemView implements HoverParent {
           if (!this.editingMemo) this.saveDraft(val);
           this.syncInputCardContentState();
         });
-        this.editorHostEl.addEventListener("focusin", () => {
-          inputCard.addClass("is-focused");
-        });
-        this.editorHostEl.addEventListener("focusout", (e) => {
-          if (!inputCard.contains(e.relatedTarget as Node)) {
-            inputCard.removeClass("is-focused");
-          }
-        });
       }
     });
 
@@ -671,7 +663,11 @@ export class MemoriaView extends ItemView implements HoverParent {
     setIcon(addTableBtn, "table");
     addTableBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      this.showTablePicker(addTableBtn);
+      if (this.settings.tableConfirmDialog) {
+        void this.confirmTableInsert(addTableBtn);
+      } else {
+        this.showTablePicker(addTableBtn);
+      }
     });
 
     const submitWrap = inputToolbar.createDiv({ cls: "memoria-submit-wrap" });
