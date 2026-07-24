@@ -139,7 +139,7 @@ export class MotesView extends ItemView implements HoverParent {
    *      2. DocumentFragment + cloneNode(true) 性能与 innerHTML 几乎一致，但 API 语义更好
    *      3. 不会破坏 DOM 上的事件监听（虽然这里是 clone，事件本来就不会复制，
    *         行为与 innerHTML 一致） */
-  private mdCache = new Map<string, DocumentFragment>();
+  private mdCache = new Map<string, HTMLElement>();
   private static MD_CACHE_MAX = 500;
 
   constructor(
@@ -3344,7 +3344,9 @@ export class MotesView extends ItemView implements HoverParent {
       const cacheKey = normalizedMd;
       const cached = this.mdCache.get(cacheKey);
       if (cached !== undefined) {
-        body.appendChild(cached.cloneNode(true));
+        for (const child of Array.from(cached.childNodes)) {
+          body.appendChild(child.cloneNode(true));
+        }
         // LRU：命中后重新插入 map 末尾
         this.mdCache.delete(cacheKey);
         this.mdCache.set(cacheKey, cached);
@@ -3356,13 +3358,12 @@ export class MotesView extends ItemView implements HoverParent {
           memo.file,
           this.childComponent
         ).then(() => {
-          // render 是异步的，完成后把当前 body 里的所有子节点克隆一份存到缓存。
-          // 用 DocumentFragment 承载（轻量，没有多余包装元素）。
-          const frag = activeDocument.createDocumentFragment();
+          // Rendered nodes are cached in an Obsidian-created detached container.
+          const cache = body.createDiv();
           for (const child of Array.from(body.childNodes)) {
-            frag.appendChild(child.cloneNode(true));
+            cache.appendChild(child.cloneNode(true));
           }
-          this.mdCache.set(cacheKey, frag);
+          this.mdCache.set(cacheKey, cache);
           if (this.mdCache.size > MotesView.MD_CACHE_MAX) {
             // 丢最老的一条（Map 保持插入顺序）
             const first = this.mdCache.keys().next();
@@ -3619,12 +3620,12 @@ export class MotesView extends ItemView implements HoverParent {
         if (!re.test(text)) return;
         re.lastIndex = 0;
         // 把命中位置切开，在命中处插入 <mark>
-        const frag = activeDocument.createDocumentFragment();
+        const replacement = body.createSpan();
         let lastIdx = 0;
         let m: RegExpExecArray | null;
         while ((m = re.exec(text)) !== null) {
           if (m.index > lastIdx) {
-            frag.appendChild(
+            replacement.appendChild(
               activeDocument.createTextNode(text.slice(lastIdx, m.index))
             );
           }
@@ -3632,13 +3633,13 @@ export class MotesView extends ItemView implements HoverParent {
             cls: "motes-search-hit",
             text: m[0],
           });
-          frag.appendChild(mark);
+          replacement.appendChild(mark);
           lastIdx = m.index + m[0].length;
         }
         if (lastIdx < text.length) {
-          frag.appendChild(activeDocument.createTextNode(text.slice(lastIdx)));
+          replacement.appendChild(activeDocument.createTextNode(text.slice(lastIdx)));
         }
-        node.parentNode?.replaceChild(frag, node);
+        node.parentNode?.replaceChild(replacement, node);
         return;
       }
       if (node.nodeType === Node.ELEMENT_NODE) {

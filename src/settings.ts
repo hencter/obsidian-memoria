@@ -1,4 +1,5 @@
-import { App, PluginSettingTab } from "obsidian";
+/* eslint-disable obsidianmd/no-unsupported-api -- Declarative definitions are retained for Obsidian 1.13+; display() adapts them for older hosts. */
+import { App, PluginSettingTab, Setting } from "obsidian";
 import type { SettingDefinitionItem } from "obsidian";
 import type MotesPlugin from "./main";
 import { t } from "./i18n";
@@ -31,11 +32,17 @@ export class MotesSettingTab extends PluginSettingTab {
         await this.plugin.saveSettings();
         this.plugin.store.notifyChange();
         return;
-      case "language":
+      case "language": {
         this.setValue(key, value);
         await this.plugin.saveSettings();
-        this.update();
+        const update = (this as unknown as { update?: () => void }).update;
+        if (update) {
+          update.call(this);
+        } else {
+          this.display();
+        }
         return;
+      }
       case "collapseLineLimit":
         this.setValue(key, Number(value) || 0);
         await this.plugin.saveSettings();
@@ -57,6 +64,11 @@ export class MotesSettingTab extends PluginSettingTab {
 
   getControlValue(key: string): unknown {
     return (this.plugin.settings as Record<string, unknown>)[key];
+  }
+
+  display(): void {
+    this.containerEl.empty();
+    this.renderLegacyDefinitions(this.getSettingDefinitions());
   }
 
   getSettingDefinitions(): SettingDefinitionItem[] {
@@ -162,6 +174,72 @@ export class MotesSettingTab extends PluginSettingTab {
     const key = `${nameKey}.desc`;
     const value = t(key);
     return value === key ? undefined : value;
+  }
+
+  private renderLegacyDefinitions(items: SettingDefinitionItem[]): void {
+    for (const item of items) {
+      if ("type" in item && (item.type === "group" || item.type === "list")) {
+        if (item.heading) {
+          new Setting(this.containerEl).setName(item.heading).setHeading();
+        }
+        this.renderLegacyDefinitions(item.items ?? []);
+        continue;
+      }
+
+      const name = String(item.name);
+      const setting = new Setting(this.containerEl).setName(name);
+      const description = typeof item.desc === "string" ? String(item.desc) : undefined;
+      if (description) {
+        setting.setDesc(description);
+      }
+
+      if ("action" in item) {
+        setting.addButton((button) => button
+          .setButtonText(name)
+          .onClick(() => item.action(setting.settingEl, 0)));
+        continue;
+      }
+
+      if (!("control" in item)) {
+        continue;
+      }
+
+      const control = item.control as {
+        type: "toggle" | "text" | "dropdown" | "slider";
+        key: string;
+        placeholder?: string;
+        options?: Record<string, string>;
+        min?: number;
+        max?: number;
+        step?: number;
+      };
+      const value = this.getControlValue(control.key);
+      switch (control.type) {
+        case "toggle":
+          setting.addToggle((toggle) => toggle
+            .setValue(Boolean(value))
+            .onChange((nextValue) => void this.setControlValue(control.key, nextValue)));
+          break;
+        case "text":
+          setting.addText((text) => text
+            .setPlaceholder(control.placeholder ?? "")
+            .setValue(typeof value === "string" ? value : "")
+            .onChange((nextValue) => void this.setControlValue(control.key, nextValue)));
+          break;
+        case "dropdown":
+          setting.addDropdown((dropdown) => dropdown
+            .addOptions(control.options ?? {})
+            .setValue(typeof value === "string" ? value : "")
+            .onChange((nextValue) => void this.setControlValue(control.key, nextValue)));
+          break;
+        case "slider":
+          setting.addSlider((slider) => slider
+            .setLimits(control.min ?? 0, control.max ?? 100, control.step ?? 1)
+            .setValue(typeof value === "number" ? value : 0)
+            .onChange((nextValue) => void this.setControlValue(control.key, nextValue)));
+          break;
+      }
+    }
   }
 
   private setValue(key: string, value: unknown): void {
