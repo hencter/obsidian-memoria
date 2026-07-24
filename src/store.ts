@@ -295,7 +295,7 @@ export class MemoStore {
     }
     // 删除后文件为空（只剩空行）则直接删文件
     if (cleaned.every((ln) => ln.trim() === "")) {
-      await this.app.vault.delete(file);
+      await this.app.fileManager.trashFile(file);
     } else {
       await this.app.vault.modify(file, cleaned.join("\n"));
     }
@@ -426,7 +426,7 @@ export class MemoStore {
     }
 
     if (cleaned.length === 0) {
-      await this.app.vault.delete(file);
+      await this.app.fileManager.trashFile(file);
     } else {
       await this.app.vault.modify(file, cleaned.join("\n"));
     }
@@ -723,7 +723,6 @@ export class MemoStore {
     const lines = raw.split(/\r?\n/);
     const memoBlock = renderMemo(time, content);
     const timeRe = /^-\s+(\d{2}:\d{2})(?:\s|$)/;
-    const memoHeadRe = /^-\s+\d{2}:\d{2}/;
 
     let insertIdx = -1;
     for (let i = 0; i < lines.length; i++) {
@@ -766,7 +765,7 @@ export class MemoStore {
         const raw = await this.app.vault.read(dayFile);
         const memos = parseFile(dayFile.path, raw);
         if (memos.length === 0) {
-          await this.app.vault.delete(dayFile);
+          await this.app.fileManager.trashFile(dayFile);
           deleted++;
           continue;
         }
@@ -791,7 +790,7 @@ export class MemoStore {
           byDate.get(key)!.push({ date: m.date, weekday: w, time: m.time, content: m.content });
         }
 
-        for (const [date, items] of byDate) {
+        for (const [, items] of byDate) {
           for (const item of items) {
             yearRaw = this.insertMemoIntoYear(yearRaw, year, item.date, item.weekday, item.time, item.content);
             merged++;
@@ -804,7 +803,7 @@ export class MemoStore {
           await this.app.vault.create(yearPath, yearRaw);
         }
 
-        await this.app.vault.delete(dayFile);
+        await this.app.fileManager.trashFile(dayFile);
         deleted++;
       } catch (err) {
         console.error(`[Motes] Migration failed for ${dayFile.path}:`, err);

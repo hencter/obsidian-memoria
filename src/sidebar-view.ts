@@ -6,7 +6,6 @@ import {
   WorkspaceLeaf,
   setIcon,
   Notice,
-  Platform,
 } from "obsidian";
 import { Memo, MotesSettings, RESERVED_TAGS, VIEW_TYPE_MOTES_SIDEBAR } from "./types";
 import { MemoStore } from "./store";

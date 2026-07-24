@@ -90,7 +90,7 @@ export class YearPanoramaView extends ItemView {
     nextBtn.addEventListener("click", () => { this.displayYear++; this.render(); });
 
     // 各月统计
-    const monthlyCounts: number[] = Array(12).fill(0);
+    const monthlyCounts = Array<number>(12).fill(0);
     for (const m of this.store.getAll()) {
       if (!m.date.startsWith(`${this.displayYear}-`)) continue;
       const mi = parseInt(m.date.substring(5, 7), 10) - 1;

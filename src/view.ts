@@ -28,7 +28,6 @@ import { parseSearchQuery, matchesQuery, SearchQuery, EMPTY_QUERY } from "./sear
 import { pickSmartReview } from "./smart-review";
 import { detectMood, moodClass } from "./mood";
 import { t } from "./i18n";
-import { shouldConvertHtmlToMd, htmlToMarkdown, looksLikeMarkdown } from "./html-to-md";
 import { exportMemos, ExportFormat } from "./export";
 import { hatch, HatchedBuddy } from "./buddy/hatch";
 import { renderBuddy, renderEgg } from "./buddy/render";
@@ -84,6 +83,7 @@ export class MotesView extends ItemView implements HoverParent {
   private filterUnsub: (() => void) | null = null;
   private inputEl!: HTMLTextAreaElement;
   private listEl!: HTMLElement;
+  private sidebarEl!: HTMLDivElement;
   private searchEl!: HTMLInputElement;
   private childComponent = new Component();
   private pageLimit: number;
@@ -738,11 +738,7 @@ export class MotesView extends ItemView implements HoverParent {
     setIcon(addTableBtn, "table");
     addTableBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (this.settings.tableConfirmDialog) {
-        void this.confirmTableInsert(addTableBtn);
-      } else {
-        this.showTablePicker(addTableBtn);
-      }
+      this.showTablePicker(addTableBtn);
     });
 
     const submitWrap = inputToolbar.createDiv({ cls: "motes-submit-wrap" });
