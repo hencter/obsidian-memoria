@@ -70,7 +70,7 @@ export default class MotesPlugin extends Plugin {
 
     // 命令
     this.addCommand({
-      id: "open-Motes",
+      id: "open",
       name: t("command.openMotes"),
       callback: () => {
         void this.activateView();
@@ -78,7 +78,7 @@ export default class MotesPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "open-Motes-stats",
+      id: "open-stats",
       name: t("command.openStats"),
       callback: () => {
         void this.activateStatsView();
@@ -86,7 +86,7 @@ export default class MotesPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "open-Motes-year",
+      id: "open-year",
       name: t("command.openYear"),
       callback: () => {
         void this.activateYearView();
@@ -94,7 +94,7 @@ export default class MotesPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "motes-quick-capture",
+      id: "quick-capture",
       name: t("command.quickCapture"),
       callback: () => {
         void this.quickCapture();
@@ -102,7 +102,7 @@ export default class MotesPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "motes-normalize-all",
+      id: "normalize-all",
       name: t("command.normalizeAll"),
       callback: () => {
         void this.normalizeAll();
@@ -110,7 +110,7 @@ export default class MotesPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "motes-migrate-daily-to-yearly",
+      id: "migrate-daily-to-yearly",
       name: t("command.migrateDailyToYearly"),
       callback: () => {
         void this.migrateDailyToYearly();
@@ -118,7 +118,7 @@ export default class MotesPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "open-Motes-sidebar",
+      id: "open-sidebar",
       name: t("command.openSidebar"),
       callback: () => {
         void this.activateSidebarView();
@@ -335,8 +335,7 @@ export default class MotesPlugin extends Plugin {
       return;
     }
 
-    const backdrop = activeDocument.createElement("div");
-    backdrop.addClass("motes-modal-backdrop");
+    const backdrop = activeDocument.body.createDiv({ cls: "motes-modal-backdrop" });
     const box = backdrop.createDiv({ cls: "motes-modal" });
     box.createDiv({
       cls: "motes-modal-title",
@@ -352,7 +351,6 @@ export default class MotesPlugin extends Plugin {
       text: t("quickCapture.send"),
       cls: "mod-cta",
     });
-    activeDocument.body.appendChild(backdrop);
     // v1.1.15: 插件卸载 / 禁用时自动清理弹窗（避免残留蒙版和 listener）
     // v1.4.11: 同时清理 mousedown 里挂出的全局 mouseup listener（见下方 pendingMouseUp）
     let pendingMouseUp: ((ev: MouseEvent) => void) | null = null;
@@ -451,17 +449,13 @@ export default class MotesPlugin extends Plugin {
     const ok = await this.confirmAsync(t("migration.confirm"));
     if (!ok) return;
 
-    const dayFiles = this.app.vault.getMarkdownFiles().filter((f) => {
-      const dayRe = /^\d{4}-\d{2}-\d{2}\.md$/;
-      return f.path.startsWith(`${this.settings.folder}/`) && dayRe.test(f.name);
-    });
-
-    if (dayFiles.length === 0) {
+    const dayFileCount = this.store.countDailyFiles();
+    if (dayFileCount === 0) {
       new Notice(t("migration.done", { merged: 0, deleted: 0 }));
       return;
     }
 
-    new Notice(t("migration.progress", { n: dayFiles.length }));
+    new Notice(t("migration.progress", { n: dayFileCount }));
     const result = await this.store.migrateDailyToYearly();
 
     if (result.errors > 0) {

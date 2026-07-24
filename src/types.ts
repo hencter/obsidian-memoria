@@ -81,6 +81,10 @@ export interface MotesSettings {
   editorMode: "native" | "tiptap" | "textarea";
   /** v3.0.0: 品牌标题，空字符串则不显示 */
   brandName: string;
+  /** 未提交的编辑器草稿，保存在插件数据中而不是浏览器存储。 */
+  inputDraft: string;
+  /** 智能回顾最近展示过的条目，用于避免短期重复。 */
+  smartReviewRecent: string[];
 }
 
 /** v2.1.0: 宠物存档数据（保存在 data.json 里） */
@@ -121,6 +125,8 @@ export const DEFAULT_SETTINGS: MotesSettings = {
   editorHeight: 200,
   editorMode: "native",
   brandName: "Motes",
+  inputDraft: "",
+  smartReviewRecent: [],
 };
 
 export const VIEW_TYPE_Motes = "motes-view";

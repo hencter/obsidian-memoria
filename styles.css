@@ -12,16 +12,16 @@
 .motes-root button.motes-cal-nav,
 .motes-root button.motes-overview-btn,
 .motes-root button.motes-edit-cancel {
-  box-shadow: none !important;
-  border: none !important;
+  box-shadow: none;
+  border: none;
 }
 .motes-root button.motes-icon-btn,
 .motes-root button.motes-tool-btn,
 .motes-root button.motes-cal-nav,
 .motes-root button.motes-overview-btn {
   background-color: transparent;
-  border: none !important;
-  box-shadow: none !important;
+  border: none;
+  box-shadow: none;
 }
 
 /* 让视图的 contentEl 填满整个面板，清除 Obsidian 默认 padding */
@@ -731,28 +731,27 @@
 
 /* 瀑布流布局 */
 .motes-waterfall-grid {
-  column-count: 2;
-  column-gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
 }
 @media (min-width: 960px) {
   .motes-waterfall-grid {
-    column-count: 3;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 @media (min-width: 1400px) {
   .motes-waterfall-grid {
-    column-count: 4;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 /* 瀑布流卡片 —— 随意贴风格 */
 .motes-waterfall-grid .motes-card {
-  break-inside: avoid;
-  margin-bottom: 14px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   box-shadow: 2px 3px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
 }
 .motes-waterfall-grid .motes-card:hover {
-  transform: scale(1.015) rotate(0deg) !important;
+  transform: scale(1.015) rotate(0deg);
   box-shadow: 4px 6px 16px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.08);
   z-index: 2;
 }
@@ -778,20 +777,20 @@
 }
 
 .motes-waterfall-grid .motes-load-more {
-  column-span: all;
+  grid-column: 1 / -1;
 }
 
 @media (max-width: 680px) {
   .motes-waterfall-grid {
-    column-count: 1;
-    column-gap: 0;
+    grid-template-columns: 1fr;
+    gap: 14px 0;
   }
   .motes-waterfall-grid .motes-card {
-    transform: none !important;
+    transform: none;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   }
   .motes-waterfall-grid .motes-card:hover {
-    transform: scale(1.01) !important;
+    transform: scale(1.01);
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   }
 }
@@ -2083,25 +2082,25 @@
 }
 /* Native CodeMirror height guardrails. See v2.4.0 fixes 627e796, 3bdc13e and 82b971f. */
 .motes-input-card.motes-editor-native .motes-editor-host {
-  height: var(--motes-editor-expanded-height, 200px) !important;
+  height: var(--motes-editor-expanded-height, 200px);
   min-height: 0;
-  max-height: 55vh !important;
-  overflow: hidden !important;
+  max-height: 55vh;
+  overflow: hidden;
   transition: height 0.18s ease;
 }
 .motes-input-card.motes-editor-native:not(.is-focused):not(.has-content):not(.is-editing):not(.dragging) .motes-editor-host {
-  height: 56px !important;
+  height: 56px;
 }
 .motes-input-card.motes-editor-native .workspace-leaf,
 .motes-input-card.motes-editor-native .workspace-leaf-content,
 .motes-input-card.motes-editor-native .markdown-source-view,
 .motes-input-card.motes-editor-native .cm-editor {
-  height: 100% !important;
-  max-height: 100% !important;
-  padding: 0 !important;
+  height: 100%;
+  max-height: 100%;
+  padding: 0;
 }
 .motes-input-card.motes-editor-native .cm-editor {
-  background: transparent !important;
+  background: transparent;
 }
 .motes-input-card.motes-editor-native .inline-title,
 .motes-input-card.motes-editor-native .view-header,
@@ -2109,35 +2108,35 @@
 .motes-input-card.motes-editor-native .view-header-title-container,
 .motes-input-card.motes-editor-native .metadata-container,
 .motes-input-card.motes-editor-native .cm-panels {
-  display: none !important;
-  visibility: hidden !important;
+  display: none;
+  visibility: hidden;
 }
 .motes-input-card.motes-editor-native .cm-scroller {
   font-family: var(--font-text);
   font-size: var(--font-text-size, 14px);
   line-height: var(--line-height-normal, 1.6);
-  padding: 0 !important;
-  overflow-y: auto !important;
+  padding: 0;
+  overflow-y: auto;
 }
 .motes-input-card.motes-editor-native .cm-sizer {
-  min-height: 0 !important;
-  padding: 0 !important;
+  min-height: 0;
+  padding: 0;
 }
 .motes-input-card.motes-editor-native .cm-content {
-  min-height: 0 !important;
-  max-height: 100% !important;
-  height: auto !important;
-  padding: 0 4px !important;
-  padding-bottom: 0 !important;
-  box-sizing: border-box !important;
+  min-height: 0;
+  max-height: 100%;
+  height: auto;
+  padding: 0 4px;
+  padding-bottom: 0;
+  box-sizing: border-box;
 }
 .motes-input-card.motes-editor-native .cm-active.cm-line {
-  height: auto !important;
-  min-height: 0 !important;
+  height: auto;
+  min-height: 0;
 }
 .motes-input-card.motes-editor-native .cm-content::after,
 .motes-input-card.motes-editor-native .cm-gutters {
-  display: none !important;
+  display: none;
 }
 .motes-card.is-inline-editing {
   border-color: var(--interactive-accent);
@@ -2181,28 +2180,28 @@
 .motes-inline-editor .metadata-container,
 .motes-inline-editor .cm-panels,
 .motes-inline-editor .cm-gutters {
-  display: none !important;
+  display: none;
 }
 .motes-inline-editor .workspace-leaf,
 .motes-inline-editor .workspace-leaf-content,
 .motes-inline-editor .markdown-source-view,
 .motes-inline-editor .cm-editor {
-  height: 100% !important;
-  max-height: 100% !important;
-  padding: 0 !important;
-  background: transparent !important;
+  height: 100%;
+  max-height: 100%;
+  padding: 0;
+  background: transparent;
 }
 .motes-inline-editor .cm-scroller {
-  padding: 0 !important;
-  overflow-y: auto !important;
+  padding: 0;
+  overflow-y: auto;
 }
 .motes-inline-editor .cm-sizer,
 .motes-inline-editor .cm-content,
 .motes-inline-editor .cm-active.cm-line {
-  min-height: 0 !important;
+  min-height: 0;
 }
 .motes-inline-editor .cm-content {
-  padding: 0 4px !important;
+  padding: 0 4px;
 }
 .motes-inline-editor .ProseMirror p {
   margin: 0 0 4px;
@@ -2214,10 +2213,10 @@
   margin-top: 10px;
 }
 .motes-sidebar-hidden {
-  display: none !important;
+  display: none;
 }
 .motes-input-hidden {
-  display: none !important;
+  display: none;
 }
 /* Tiptap 编辑器在移动端保持较小的起始高度。 */
 .motes-editor-host {
@@ -4917,25 +4916,22 @@
   visibility: hidden;
 }
 
-/* ================== Button theme contract ==================
- * A few declarations intentionally remain important because some Obsidian
- * themes mark their generic button chrome important as well.
- */
+/* ================== Button theme contract ================== */
 .motes-root button.motes-icon-btn,
 .motes-root button.motes-tool-btn,
 .motes-root button.motes-cal-nav,
 .motes-root button.motes-overview-btn,
 .motes-root button.motes-collapse-toggle {
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
+  border: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 .motes-root button.motes-submit-btn {
-  border: none !important;
-  background: var(--interactive-accent) !important;
-  color: var(--text-on-accent) !important;
-  box-shadow: none !important;
+  border: none;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  box-shadow: none;
 }
 
 .motes-root
@@ -4945,21 +4941,21 @@
     in srgb,
     var(--interactive-accent) 32%,
     var(--background-secondary)
-  ) !important;
-  color: color-mix(in srgb, var(--text-normal) 72%, var(--interactive-accent)) !important;
-  opacity: 1 !important;
-  filter: saturate(0.72) !important;
+  );
+  color: color-mix(in srgb, var(--text-normal) 72%, var(--interactive-accent));
+  opacity: 1;
+  filter: saturate(0.72);
 }
 
 .motes-root button.motes-submit-btn:hover {
-  background: var(--interactive-accent-hover, var(--interactive-accent)) !important;
-  color: var(--text-on-accent) !important;
+  background: var(--interactive-accent-hover, var(--interactive-accent));
+  color: var(--text-on-accent);
 }
 
 .motes-stats-view button,
 .motes-year-view button {
   text-shadow: none;
-  box-shadow: none !important;
+  box-shadow: none;
 }
 
 .motes-root input.motes-search,
@@ -4970,16 +4966,16 @@
 .motes-root input.motes-review-input:hover,
 .motes-root input.motes-review-input:focus,
 .motes-root input.motes-review-input:active {
-  border: none !important;
-  background: transparent !important;
-  outline: none !important;
-  box-shadow: none !important;
+  border: none;
+  background: transparent;
+  outline: none;
+  box-shadow: none;
 }
 
 /* ================== 独立侧栏视图 ================== */
 .workspace-leaf-content[data-type="motes-sidebar-view"] .view-content {
-  padding: 0 !important;
-  overflow-y: auto !important;
+  padding: 0;
+  overflow-y: auto;
   background: var(--background-primary);
 }
 .motes-sidebar-view {
@@ -5079,7 +5075,7 @@
 }
 /* 清除内嵌侧栏的卡片装饰泄漏 */
 .motes-sidebar-view .motes-overview {
-  background: transparent !important;
+  background: transparent;
   padding: 10px 6px 6px;
 }
 .motes-sidebar-view .motes-heatmap {
@@ -5093,7 +5089,7 @@
   border-radius: 2px;
 }
 .motes-sidebar-view button {
-  box-shadow: none !important;
+  box-shadow: none;
 }
 .motes-sidebar-view .motes-daily-goal-row {
   margin: 0;
@@ -5161,136 +5157,4 @@
 }
 .motes-nav-count {
   font-size: 10px;
-}
-
-/* Desktop and mobile: keep embedded Obsidian CodeMirror inside the Motes input host. */
-.motes-input-card.motes-editor-native .motes-editor-host {
-  height: var(--motes-editor-expanded-height, 200px) !important;
-  min-height: 0;
-  max-height: 55vh !important;
-  overflow: hidden !important;
-  transition: height 0.18s ease;
-}
-.motes-input-card.motes-editor-native:not(.is-focused):not(.has-content):not(.is-editing):not(.dragging) .motes-editor-host {
-  height: 56px !important;
-}
-.motes-input-card.motes-editor-native .inline-title,
-.motes-input-card.motes-editor-native .view-header,
-.motes-input-card.motes-editor-native .view-header-nav-buttons,
-.motes-input-card.motes-editor-native .view-header-title-container,
-.motes-input-card.motes-editor-native .metadata-container,
-.motes-input-card.motes-editor-native .cm-panels,
-.motes-input-card.motes-editor-native .cm-gutters {
-  display: none !important;
-  visibility: hidden !important;
-}
-.motes-input-card.motes-editor-native .workspace-leaf,
-.motes-input-card.motes-editor-native .workspace-leaf-content,
-.motes-input-card.motes-editor-native .markdown-source-view,
-.motes-input-card.motes-editor-native .cm-editor {
-  height: 100% !important;
-  max-height: 100% !important;
-  padding: 0 !important;
-}
-.motes-input-card.motes-editor-native .cm-editor {
-  background: transparent !important;
-}
-.motes-input-card.motes-editor-native .cm-scroller {
-  font-family: var(--font-text);
-  font-size: var(--font-text-size, 14px);
-  line-height: var(--line-height-normal, 1.6);
-  padding: 0 !important;
-  overflow-y: auto !important;
-}
-.motes-input-card.motes-editor-native .cm-sizer,
-.motes-input-card.motes-editor-native .cm-content,
-.motes-input-card.motes-editor-native .cm-active.cm-line {
-  min-height: 0 !important;
-}
-.motes-input-card.motes-editor-native .cm-sizer {
-  padding: 0 !important;
-}
-.motes-input-card.motes-editor-native .cm-content {
-  max-height: 100% !important;
-  height: auto !important;
-  padding: 0 4px !important;
-  padding-bottom: 0 !important;
-  box-sizing: border-box !important;
-}
-.motes-input-card.motes-editor-native .cm-content::after {
-  display: none !important;
-}
-
-/* Inline native editor must size to the memo card, not to Obsidian's workspace pane. */
-.motes-inline-editor {
-  width: 100%;
-  min-width: 0;
-  min-height: 0;
-  max-height: 55vh;
-  overflow-y: auto;
-  box-sizing: border-box;
-}
-.motes-inline-editor .view-header,
-.motes-inline-editor .view-header-nav-buttons,
-.motes-inline-editor .view-header-title-container,
-.motes-inline-editor .inline-title,
-.motes-inline-editor .metadata-container,
-.motes-inline-editor .cm-panels,
-.motes-inline-editor .cm-gutters {
-  display: none !important;
-  visibility: hidden !important;
-}
-.motes-inline-editor .workspace-leaf,
-.motes-inline-editor .workspace-leaf-content,
-.motes-inline-editor .markdown-source-view,
-.motes-inline-editor .cm-editor,
-.motes-inline-editor .cm-scroller,
-.motes-inline-editor .cm-sizer {
-  width: 100% !important;
-  height: auto !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  flex: none !important;
-  padding: 0 !important;
-  background: transparent !important;
-}
-.motes-inline-editor .cm-scroller {
-  overflow: visible !important;
-}
-.motes-inline-editor .cm-content {
-  min-height: 0 !important;
-  padding: 0 4px !important;
-}
-.motes-inline-editor .markdown-source-view.mod-cm6 .cm-sizer,
-.motes-inline-editor .markdown-source-view.mod-cm6 .cm-contentContainer,
-.motes-inline-editor .markdown-source-view.mod-cm6 .cm-content {
-  width: 100% !important;
-  max-width: none !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  box-sizing: border-box !important;
-}
-
-/* The compose editor should use the complete input-card width as well. */
-.motes-input-card.motes-editor-native .markdown-source-view.mod-cm6 .cm-sizer {
-  width: calc(100% - 48px) !important;
-  max-width: none !important;
-  margin-left: 24px !important;
-  margin-right: 24px !important;
-  box-sizing: border-box !important;
-}
-.motes-input-card.motes-editor-native .markdown-source-view.mod-cm6 .cm-contentContainer,
-.motes-input-card.motes-editor-native .markdown-source-view.mod-cm6 .cm-content {
-  width: 100% !important;
-  max-width: none !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  box-sizing: border-box !important;
-}
-@media (max-width: 680px) {
-  .motes-input-card.motes-editor-native .markdown-source-view.mod-cm6 .cm-sizer {
-    width: calc(100% - 32px) !important;
-    margin-left: 16px !important;
-    margin-right: 16px !important;
-  }
 }

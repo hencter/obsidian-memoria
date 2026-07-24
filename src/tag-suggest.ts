@@ -1,9 +1,8 @@
 // ================= 标签联想下拉框 =================
 // 监听 textarea 输入，当光标处于 #xxx 这种"未闭合标签"时弹出建议
-// 数据来源：Obsidian 整个 Vault 的 metadataCache（含所有笔记的标签）
-//          + 当前 Motes 的标签（已包含在内）
+// 数据来源：当前 Motes 存储文件中的标签。
 
-import { App, getAllTags, setIcon } from "obsidian";
+import { setIcon } from "obsidian";
 
 export interface TagSuggestTarget {
   element: HTMLElement;
@@ -19,39 +18,22 @@ export class TagSuggest {
   private active = 0;
   private query = "";
 
-  /** v1.4.11: 标签全扫缓存。
-   *   原实现：每按一个键 → 遍历 vault 所有 md → metadataCache.getFileCache → getAllTags。
-   *   vault 有 3000+ md 时每次打字都能感觉到输入延迟。
-   *   现在：30 秒 TTL 缓存，期间按键直接复用；另外订阅 metadataCache "changed" 事件
-   *   让缓存失效，保证新增标签可以在下次打字时看到。 */
+  /** 标签统计缓存，避免每次输入时重复遍历 Motes memo。 */
   private cachedTags: { name: string; count: number }[] | null = null;
   private cacheTime = 0;
   private static CACHE_TTL_MS = 30_000;
-  private metaChangeRef: { unref: () => void } | null = null;
 
-  constructor(private app: App, private target: TagSuggestTarget) {
+  constructor(private target: TagSuggestTarget, private getTags: () => readonly string[]) {
     this.target.element.addEventListener("input", this.handleInput);
     this.target.element.addEventListener("keydown", this.handleKeydown, true);
     this.target.element.addEventListener("blur", this.handleBlur);
     this.target.element.addEventListener("scroll", () => this.close());
-    // v1.4.11: 监听 metadataCache 变化让缓存失效。
-    //   用 app.metadataCache.on("changed", cb) 返回的 ref，在 destroy 时 offref。
-    const ref = this.app.metadataCache.on("changed", () => {
-      this.cachedTags = null;
-    });
-    this.metaChangeRef = {
-      unref: () => this.app.metadataCache.offref(ref),
-    };
   }
 
   destroy(): void {
     this.target.element.removeEventListener("input", this.handleInput);
     this.target.element.removeEventListener("keydown", this.handleKeydown, true);
     this.target.element.removeEventListener("blur", this.handleBlur);
-    if (this.metaChangeRef) {
-      this.metaChangeRef.unref();
-      this.metaChangeRef = null;
-    }
     this.close();
   }
 
@@ -92,7 +74,7 @@ export class TagSuggest {
     // v2.0.7: IME 组合态下的 Enter/Tab 是"确认候选词"，不是选择下拉项
     //   否则中文输入法打 #xxx 时按 Enter 上屏拼音会被联想面板吞掉。
     //   和 view.ts 主 keydown 的修复思路完全一致。
-    if (e.isComposing || (e as KeyboardEvent & { keyCode?: number }).keyCode === 229) {
+    if (e.isComposing || e.key === "Process") {
       return;
     }
     if (e.key === "ArrowDown") {
@@ -151,8 +133,7 @@ export class TagSuggest {
 
   // -------- 数据 --------
 
-  /** 收集 Vault 里所有标签，按使用频率排序
-   *  v1.4.11: 30 秒 TTL 缓存 + metadataCache changed 事件失效。 */
+  /** 收集 Motes 标签，按使用频率排序。 */
   private collectAllTags(): { name: string; count: number }[] {
     if (
       this.cachedTags &&
@@ -161,18 +142,10 @@ export class TagSuggest {
       return this.cachedTags;
     }
     const counter = new Map<string, number>();
-    const cache = this.app.metadataCache;
-    const files = this.app.vault.getMarkdownFiles();
-    for (const f of files) {
-      const meta = cache.getFileCache(f);
-      if (!meta) continue;
-      const tags = getAllTags(meta) ?? [];
-      for (const tag of tags) {
-        // tag 形如 "#知识/学习"，去掉前面的 #
-        const name = tag.replace(/^#/, "");
-        if (!name) continue;
-        counter.set(name, (counter.get(name) ?? 0) + 1);
-      }
+    for (const tag of this.getTags()) {
+      const name = tag.replace(/^#/, "");
+      if (!name) continue;
+      counter.set(name, (counter.get(name) ?? 0) + 1);
     }
     const result = [...counter.entries()]
       .map(([name, count]) => ({ name, count }))

@@ -668,7 +668,7 @@ export class MotesView extends ItemView implements HoverParent {
       this.inputEl.setAttr("aria-hidden", "true");
       this.inputEl.setAttr("tabindex", "-1");
       void this.setupNativeEditor(inputCard);
-      this.tagSuggest = new TagSuggest(this.app, this.createTextareaSuggestTarget());
+      this.tagSuggest = new TagSuggest(this.createTextareaSuggestTarget(), () => this.store.getAll().flatMap((memo) => memo.tags));
     } else {
       this.editorHostEl.addClass("motes-editor-host-hidden");
       this.inputEl.addEventListener("input", () => {
@@ -676,7 +676,7 @@ export class MotesView extends ItemView implements HoverParent {
         this.syncInputCardContentState();
         this.autoResizeInput();
       });
-      this.tagSuggest = new TagSuggest(this.app, this.createTextareaSuggestTarget());
+      this.tagSuggest = new TagSuggest(this.createTextareaSuggestTarget(), () => this.store.getAll().flatMap((memo) => memo.tags));
       const draft = this.loadDraft();
       if (draft) this.inputEl.value = draft;
     }
@@ -1380,7 +1380,7 @@ export class MotesView extends ItemView implements HoverParent {
 
   /** 用浏览器 file picker 选图片 */
   private pickImageFromDisk(): void {
-    const inp = activeDocument.createElement("input");
+    const inp = activeDocument.body.createEl("input");
     inp.type = "file";
     inp.accept = "image/*";
     inp.multiple = true;
@@ -1391,6 +1391,7 @@ export class MotesView extends ItemView implements HoverParent {
       })().catch((err) => {
         console.error("[Motes] Failed to import selected image:", err);
       });
+      inp.remove();
     });
     inp.click();
   }
@@ -1435,7 +1436,7 @@ export class MotesView extends ItemView implements HoverParent {
       // IME 组合态下 Enter 是"确认候选词"，不发送
       if (
         e.isComposing ||
-        (e as KeyboardEvent & { keyCode?: number }).keyCode === 229
+        e.key === "Process"
       ) {
         return false;
       }
@@ -1522,48 +1523,17 @@ export class MotesView extends ItemView implements HoverParent {
     return `${text}${sep}#${activeTag}`;
   }
 
-  /** v1.1.7: 草稿持久化（localStorage）
-   *  v1.1.14: key 带上 vault 名，避免在多 vault 之间切换时草稿串味。
-   */
-  private static DRAFT_KEY_PREFIX = "Motes:input-draft";
-  private draftKey(): string {
-    try {
-      return `${MotesView.DRAFT_KEY_PREFIX}:${this.app.vault.getName()}`;
-    } catch {
-      return MotesView.DRAFT_KEY_PREFIX;
-    }
-  }
   private saveDraft(text: string): void {
-    try {
-      const key = this.draftKey();
-      if (text.trim() === "") {
-        window.localStorage.removeItem(key);
-      } else {
-        // v1.4.11: 草稿大小上限保险丝。
-        //   localStorage 上限一般 5-10MB，如果有人不小心往输入框粘了一个 base64 大图片，
-        //   过去会写进草稿，塞爆 localStorage 影响其他插件。
-        //   正常粘贴图片走 handleImageFile 已经会转成附件，不会落到草稿里；
-        //   这里只是防御性兜底。超过 512KB 直接跳过写入。
-        if (text.length > 512 * 1024) return;
-        window.localStorage.setItem(key, text);
-      }
-    } catch {
-      /* localStorage 可能被禁用，忽略 */
-    }
+    if (text.length > 512 * 1024) return;
+    this.settings.inputDraft = text.trim() === "" ? "" : text;
+    void this.plugin.saveSettings();
   }
   private loadDraft(): string {
-    try {
-      return window.localStorage.getItem(this.draftKey()) ?? "";
-    } catch {
-      return "";
-    }
+    return this.settings.inputDraft;
   }
   private clearDraft(): void {
-    try {
-      window.localStorage.removeItem(this.draftKey());
-    } catch {
-      /* ignore */
-    }
+    this.settings.inputDraft = "";
+    void this.plugin.saveSettings();
   }
 
   private getEditorValue(): string {
@@ -1594,13 +1564,13 @@ export class MotesView extends ItemView implements HoverParent {
   }
 
   private createTagSuggest(editor: Editor): TagSuggest {
-    return new TagSuggest(this.app, {
+    return new TagSuggest({
       element: editor.view.dom,
       getTextBeforeCursor: () => this.getTiptapTextBeforeCursor(editor),
       replaceQuery: (query, replacement) => this.replaceTiptapQuery(editor, query, replacement),
       getAnchorPosition: () => this.getTiptapCursorPosition(editor),
       focus: () => editor.commands.focus(),
-    });
+    }, () => this.store.getAll().flatMap((memo) => memo.tags));
   }
 
   private getTiptapTextBeforeCursor(editor: Editor): string {
@@ -1802,7 +1772,7 @@ export class MotesView extends ItemView implements HoverParent {
 
 
   /** 进入编辑模式：把 memo 内容填入输入框
-   *  v1.1.7: 进入前如果输入框有在打的草稿，先保存到 localStorage，退出编辑时恢复
+   *  v1.1.7: 进入前保留正在编辑的输入草稿，退出编辑时恢复
    *  v1.6.0: 同步把 memo 的时间填入 datetime-local 输入框，允许编辑时一并修改
    */
   private enterEditMode(memo: Memo): void {
@@ -2949,6 +2919,11 @@ export class MotesView extends ItemView implements HoverParent {
           count: Math.min(5, result.length),
           todayStr,
           todayMemos,
+          recentShown: this.settings.smartReviewRecent,
+          onRecentShownChange: (items) => {
+            this.settings.smartReviewRecent = items;
+            void this.plugin.saveSettings();
+          },
         });
       }
       const seed = this.filter.randomSeed ?? 1;
@@ -3133,8 +3108,14 @@ export class MotesView extends ItemView implements HoverParent {
     prevLimit: number,
     newLimit: number
   ): void {
+    // Grid waterfall cards are not grouped by date, so rebuilding is safer than
+    // appending into the list-layout day groups.
+    if (this.settings.waterfallLayout) {
+      this.renderList();
+      return;
+    }
     // 移除旧的 load-more 提示和 empty
-    const oldMore = this.listEl.querySelector(".Motes-load-more");
+    const oldMore = this.listEl.querySelector(".motes-load-more");
     oldMore?.remove();
     const oldEmpty = this.listEl.querySelector(".Motes-empty");
     oldEmpty?.remove();
@@ -3647,9 +3628,10 @@ export class MotesView extends ItemView implements HoverParent {
               activeDocument.createTextNode(text.slice(lastIdx, m.index))
             );
           }
-          const mark = activeDocument.createElement("mark");
-          mark.className = "motes-search-hit";
-          mark.textContent = m[0];
+          const mark = activeDocument.body.createEl("mark", {
+            cls: "motes-search-hit",
+            text: m[0],
+          });
           frag.appendChild(mark);
           lastIdx = m.index + m[0].length;
         }
@@ -3818,15 +3800,6 @@ export class MotesView extends ItemView implements HoverParent {
         .setTitle(t("card.openSource"))
         .setIcon("file-text")
         .onClick(() => this.openInFile(memo))
-    );
-    menu.addItem((item) =>
-      item
-        .setTitle(t("card.copySource"))
-        .setIcon("copy")
-        .onClick(async () => {
-          await navigator.clipboard.writeText(memo.content);
-          new Notice(t("notice.copied"));
-        })
     );
     // v1.1.19: 保存为图片（轻量版 —— SVG foreignObject + canvas，零依赖 ~3KB）
     menu.addItem((item) =>
@@ -4925,19 +4898,22 @@ export class MotesView extends ItemView implements HoverParent {
         img.onerror = () => reject(new Error("SVG 渲染失败"));
         img.src = url;
       });
-      const canvas = activeDocument.createElement("canvas");
+      const canvas = activeDocument.body.createEl("canvas");
+      canvas.setCssStyles({ display: "none" });
       canvas.width = width * scale;
       canvas.height = height * scale;
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("canvas 不可用");
       ctx.scale(scale, scale);
       ctx.drawImage(img, 0, 0, width, height);
-      return await new Promise<Blob>((resolve, reject) => {
+      const result = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob((result) => {
           if (result) resolve(result);
           else reject(new Error("canvas.toBlob 返回 null（通常是 tainted canvas）"));
         }, "image/png");
       });
+      canvas.remove();
+      return result;
     } finally {
       URL.revokeObjectURL(url);
     }
@@ -4946,10 +4922,9 @@ export class MotesView extends ItemView implements HoverParent {
   /** 触发浏览器下载一个 Blob */
   private downloadBlob(blob: Blob, filename: string): void {
     const url = URL.createObjectURL(blob);
-    const a = activeDocument.createElement("a");
-    a.href = url;
-    a.download = filename;
-    activeDocument.body.appendChild(a);
+    const a = activeDocument.body.createEl("a", {
+      attr: { href: url, download: filename },
+    });
     a.click();
     a.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);

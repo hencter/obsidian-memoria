@@ -3,7 +3,7 @@
 // 追加新 memo、删除、编辑、置顶/收藏
 // v3.0.0: 存储方式改为日记格式 YYYY-MM-DD.md（每篇为独立天文件）
 
-import { App, TFile, normalizePath } from "obsidian";
+import { App, TFile, TFolder, normalizePath } from "obsidian";
 import { Memo, MotesSettings, PIN_TAG, STAR_TAG } from "./types";
 import {
   parseFile,
@@ -107,11 +107,22 @@ export class MemoStore {
 
   private collectFiles(): TFile[] {
     const folder = normalizePath(this.settings.folder);
-    return this.app.vault.getMarkdownFiles().filter((f) => {
-      const p = f.path;
-      if (f.name.startsWith("_")) return false;
-      return p === `${folder}/${f.name}` || p.startsWith(`${folder}/`);
-    });
+    const root = this.app.vault.getAbstractFileByPath(folder);
+    if (!(root instanceof TFolder)) return [];
+    const files: TFile[] = [];
+    const visit = (entry: TFolder): void => {
+      for (const child of entry.children) {
+        if (child instanceof TFolder) visit(child);
+        else if (child instanceof TFile && child.extension === "md" && !child.name.startsWith("_")) files.push(child);
+      }
+    };
+    visit(root);
+    return files;
+  }
+
+  countDailyFiles(): number {
+    const dayRe = /^\d{4}-\d{2}-\d{2}\.md$/;
+    return this.collectFiles().filter((file) => dayRe.test(file.name)).length;
   }
 
   isInFolder(file: TFile): boolean {
@@ -752,9 +763,7 @@ export class MemoStore {
   async migrateDailyToYearly(): Promise<{ merged: number; deleted: number; errors: number }> {
     const folder = normalizePath(this.settings.folder);
     const dayRe = /^(\d{4})-(\d{2})-(\d{2})\.md$/;
-    const dayFiles = this.app.vault.getMarkdownFiles().filter(
-      (f) => f.path.startsWith(`${folder}/`) && dayRe.test(f.name)
-    );
+    const dayFiles = this.collectFiles().filter((file) => dayRe.test(file.name));
 
     let merged = 0;
     let deleted = 0;

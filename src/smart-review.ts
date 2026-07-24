@@ -13,7 +13,7 @@
  *         + random_jitter             // 抖动：避免完全相同的排序，给随机一点惊喜
  *
  * 设计原则：
- *   - 数据不跨插件生命周期持久化（除了简单的"最近展示过"列表，存 localStorage）
+ *   - 最近展示历史保存在插件数据中
  *   - 零异步：同步算分
  *   - 无机器学习，算法人类可理解可调参
  *   - 失败优雅回退：任何字段缺失/类型错误都回退到随机
@@ -26,8 +26,6 @@
 import { Memo } from "./types";
 import { detectMood, Mood } from "./mood";
 
-/** localStorage key：最近展示过的 memo range[0] 列表（用 file:range[0] 作为 key） */
-const RECENT_SHOWN_KEY = "Motes:smart-review:recent";
 const RECENT_SHOWN_MAX = 30; // 保留最近 30 条曾展示过的，超出 FIFO
 
 export interface SmartReviewOptions {
@@ -37,6 +35,8 @@ export interface SmartReviewOptions {
   todayStr: string;
   /** 今日已写的 memos（用于算"主题回响" + "情感配对"） */
   todayMemos: Memo[];
+  recentShown: readonly string[];
+  onRecentShownChange: (items: string[]) => void;
 }
 
 /** 从 memos 池中挑出 N 条最值得回顾的 */
@@ -61,8 +61,7 @@ export function pickSmartReview(
   // 今日笔记的主导情绪（多条里占比最高的那种）
   const todayMood = dominantMood(todayMemos);
 
-  // 最近展示过的 id 集合（从 localStorage 读）
-  const recentShown = loadRecentShown();
+  const recentShown = opts.recentShown;
 
   // 用 Unix timestamp 计算每条的"距今天数"
   const nowTs = Date.now();
@@ -115,7 +114,7 @@ export function pickSmartReview(
 
   // 更新 "最近展示过" 列表
   const newShown = [...picked.map(memoId), ...recentShown];
-  saveRecentShown(newShown.slice(0, RECENT_SHOWN_MAX));
+  opts.onRecentShownChange(newShown.slice(0, RECENT_SHOWN_MAX));
 
   return picked;
 }
@@ -157,25 +156,4 @@ function dominantMood(memos: Memo[]): Mood {
   // 如果主导是 neutral 或 0 > top，返回 neutral
   if (entries[0][0] === "neutral" || entries[0][1] === 0) return "neutral";
   return entries[0][0];
-}
-
-function loadRecentShown(): string[] {
-  try {
-    const raw = window.localStorage.getItem(RECENT_SHOWN_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed)
-      ? parsed.filter((x): x is string => typeof x === "string")
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveRecentShown(list: string[]): void {
-  try {
-    window.localStorage.setItem(RECENT_SHOWN_KEY, JSON.stringify(list));
-  } catch {
-    /* ignore */
-  }
 }

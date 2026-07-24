@@ -4,7 +4,7 @@
  * 解决两个核心问题（来自 GitHub issue 反馈）：
  *
  *   1. 撤销栈保留：直接 `el.value = newText` 会清空浏览器原生 undo stack，
- *      导致用户按 Ctrl+Z 撤销不了。改用 setRangeText() / execCommand 'insertText'
+ *      导致用户按 Ctrl+Z 撤销不了。改用 setRangeText()。
  *      就能让操作进入 undo stack，Ctrl+Z 自然支持。
  *
  *   2. 选中包裹：用户在 Obsidian 里选中文本按 `**` 期望是加粗（包裹），
@@ -45,31 +45,13 @@
  *   Ctrl/Cmd/Alt + * 等修饰键组合         *          不拦截（让快捷键 work）
  */
 
-/** 安全替换 textarea/input 的范围内容，**保留浏览器 undo stack**
- *
- *  v2.1.0-iter9: Obsidian (Electron/Chromium) 的实测发现：
- *    - setRangeText() 虽然是标准 API，但**不会进入 undo stack**（实测确认）
- *    - execCommand('insertText') 虽然 deprecated 但**确实进 undo stack**（走"模拟键盘输入"路径）
- *  所以优先级颠倒过来：execCommand 第一，setRangeText 第二。
- */
+/** 安全替换 textarea/input 的范围内容。 */
 export function replaceTextareaRange(
   el: HTMLTextAreaElement | HTMLInputElement,
   start: number,
   end: number,
   newText: string
 ): void {
-  // 优先：execCommand('insertText') —— 实测在 Obsidian/Electron 里能保 undo
-  try {
-    el.focus();
-    el.setSelectionRange(start, end);
-    if (activeDocument.execCommand("insertText", false, newText)) {
-      // execCommand 会触发 input 事件，无需手动派发
-      return;
-    }
-  } catch {
-    /* 降级 */
-  }
-  // Fallback: setRangeText（标准但 undo 不可靠）
   if (typeof el.setRangeText === "function") {
     try {
       el.focus();
@@ -107,7 +89,7 @@ export class WrapHandler {
   handleKey(e: KeyboardEvent, el: HTMLTextAreaElement): boolean {
     if (e.ctrlKey || e.metaKey || e.altKey) return false;
     // IME composing 不拦截
-    if (e.isComposing || (e as KeyboardEvent & { keyCode?: number }).keyCode === 229) {
+    if (e.isComposing || e.key === "Process") {
       return false;
     }
 
